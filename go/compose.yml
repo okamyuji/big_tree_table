@@ -17,5 +17,28 @@ services:
       timeout: 5s
       retries: 10
 
+  backend:
+    build: ./backend
+    container_name: bigtable-backend
+    environment:
+      DB_HOST: mysql
+      DB_PORT: "3306"
+      DB_USER: root
+      DB_PASS: rootpass
+      DB_NAME: bigtable
+    ports:
+      - "8080:8080"
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  frontend:
+    build: ./frontend
+    container_name: bigtable-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+
 volumes:
   mysql-data:
