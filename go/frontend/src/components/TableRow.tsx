@@ -1,5 +1,5 @@
 import type { Order } from "../types/order";
-import { COLUMNS } from "./TableHeader";
+import { COLUMNS } from "./columns";
 
 interface TableRowProps {
   order: Order;

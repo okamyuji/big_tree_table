@@ -8,8 +8,8 @@ export async function fetchOrders(
 
   searchParams.set("page", String(params.page));
   searchParams.set("per_page", String(params.perPage));
-  searchParams.set("sort_column", params.sort.column);
-  searchParams.set("sort_direction", params.sort.direction);
+  searchParams.set("sort", params.sort.column);
+  searchParams.set("order", params.sort.direction);
 
   const { filters } = params;
   if (filters.order_type) searchParams.set("order_type", filters.order_type);

@@ -78,8 +78,8 @@ describe("useTableData", () => {
 
     const lastCall = fetchMock.mock.calls[fetchMock.mock.calls.length - 1];
     const url = lastCall[0] as string;
-    expect(url).toContain("sort_column=customer_name");
-    expect(url).toContain("sort_direction=asc");
+    expect(url).toContain("sort=customer_name");
+    expect(url).toContain("order=asc");
   });
 
   it("sends correct params on page change", async () => {
