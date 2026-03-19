@@ -84,6 +84,34 @@ func TestBuildQuery_AllFilters(t *testing.T) {
 	}
 }
 
+func TestBuildQuery_LikeWildcardEscaped(t *testing.T) {
+	p := QueryParams{Page: 1, PerPage: 50, Sort: "id", Order: "asc", CustomerName: "100%株式会社"}
+	_, args := BuildQuery(p)
+	if len(args) != 1 {
+		t.Fatalf("expected 1 arg, got %d", len(args))
+	}
+	got := args[0].(string)
+	expected := `%100\%株式会社%`
+	if got != expected {
+		t.Errorf("expected LIKE arg %q, got %q", expected, got)
+	}
+}
+
+func TestBuildQuery_InvalidDateIgnored(t *testing.T) {
+	p := QueryParams{Page: 1, PerPage: 50, Sort: "id", Order: "asc", DateFrom: "not-a-date", DateTo: "2024-01-01"}
+	query, args := BuildQuery(p)
+	// 不正なDateFromは無視され、DateToだけが条件に含まれる
+	if len(args) != 1 {
+		t.Fatalf("expected 1 arg (only valid date_to), got %d", len(args))
+	}
+	if !strings.Contains(query, "order_date <= ?") {
+		t.Errorf("expected order_date <= ?, got %s", query)
+	}
+	if strings.Contains(query, "order_date >= ?") {
+		t.Errorf("invalid date_from should be ignored, got %s", query)
+	}
+}
+
 func TestBuildQuery_DeferredJoinForLargeOffset(t *testing.T) {
 	// OFFSETが閾値以上の場合、deferred joinに切り替わることを確認
 	p := QueryParams{Page: 501, PerPage: 50, Sort: "order_date", Order: "desc"}

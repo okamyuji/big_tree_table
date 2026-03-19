@@ -2,6 +2,7 @@ package model
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 	"time"
 )
@@ -91,6 +92,17 @@ func BuildCountQuery(p QueryParams) (string, []any) {
 	return fmt.Sprintf("SELECT COUNT(*) FROM orders %s", where), args
 }
 
+// datePattern validates YYYY-MM-DD format
+var datePattern = regexp.MustCompile(`^\d{4}-\d{2}-\d{2}$`)
+
+// escapeLike escapes LIKE wildcards (% and _) in user input
+func escapeLike(s string) string {
+	s = strings.ReplaceAll(s, `\`, `\\`)
+	s = strings.ReplaceAll(s, `%`, `\%`)
+	s = strings.ReplaceAll(s, `_`, `\_`)
+	return s
+}
+
 func buildWhere(p QueryParams) (string, []any) {
 	var conditions []string
 	var args []any
@@ -104,17 +116,17 @@ func buildWhere(p QueryParams) (string, []any) {
 	}
 	if p.CustomerName != "" {
 		conditions = append(conditions, "customer_name LIKE ?")
-		args = append(args, "%"+p.CustomerName+"%")
+		args = append(args, "%"+escapeLike(p.CustomerName)+"%")
 	}
 	if p.ProductName != "" {
 		conditions = append(conditions, "product_name LIKE ?")
-		args = append(args, "%"+p.ProductName+"%")
+		args = append(args, "%"+escapeLike(p.ProductName)+"%")
 	}
-	if p.DateFrom != "" {
+	if p.DateFrom != "" && datePattern.MatchString(p.DateFrom) {
 		conditions = append(conditions, "order_date >= ?")
 		args = append(args, p.DateFrom)
 	}
-	if p.DateTo != "" {
+	if p.DateTo != "" && datePattern.MatchString(p.DateTo) {
 		conditions = append(conditions, "order_date <= ?")
 		args = append(args, p.DateTo)
 	}
