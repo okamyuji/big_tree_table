@@ -84,6 +84,30 @@ func TestBuildQuery_AllFilters(t *testing.T) {
 	}
 }
 
+func TestBuildQuery_DeferredJoinForLargeOffset(t *testing.T) {
+	// OFFSETが閾値以上の場合、deferred joinに切り替わることを確認
+	p := QueryParams{Page: 501, PerPage: 50, Sort: "order_date", Order: "desc"}
+	query, _ := BuildQuery(p)
+	if !strings.Contains(query, "INNER JOIN") {
+		t.Errorf("expected deferred join with INNER JOIN for large offset, got %s", query)
+	}
+	if !strings.Contains(query, "SELECT id FROM orders") {
+		t.Errorf("expected subquery to select only id, got %s", query)
+	}
+	if !strings.Contains(query, "LIMIT 50 OFFSET 25000") {
+		t.Errorf("expected LIMIT 50 OFFSET 25000, got %s", query)
+	}
+}
+
+func TestBuildQuery_SmallOffsetNoDeferred(t *testing.T) {
+	// OFFSETが閾値未満の場合、通常のクエリのままであることを確認
+	p := QueryParams{Page: 10, PerPage: 50, Sort: "id", Order: "asc"}
+	query, _ := BuildQuery(p)
+	if strings.Contains(query, "INNER JOIN") {
+		t.Errorf("expected simple query for small offset, got %s", query)
+	}
+}
+
 func TestBuildCountQuery_NoFilters(t *testing.T) {
 	p := QueryParams{Page: 1, PerPage: 50}
 	query, args := BuildCountQuery(p)

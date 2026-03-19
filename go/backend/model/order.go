@@ -54,6 +54,8 @@ var allowedSortColumns = map[string]bool{
 	"delivery_date": true, "created_at": true,
 }
 
+const offsetThreshold = 10000
+
 func BuildQuery(p QueryParams) (string, []any) {
 	where, args := buildWhere(p)
 	sortCol := "id"
@@ -65,6 +67,18 @@ func BuildQuery(p QueryParams) (string, []any) {
 		sortOrder = "DESC"
 	}
 	offset := (p.Page - 1) * p.PerPage
+
+	// OFFSETが大きい場合はdeferred joinで最適化する。
+	// 内側のサブクエリがインデックスのみをスキャンしてIDを特定し、
+	// 外側のJOINで該当行のフルデータを取得する。
+	if offset >= offsetThreshold {
+		query := fmt.Sprintf(
+			"SELECT o.id, o.order_number, o.order_type, o.order_date, o.customer_name, o.customer_code, o.product_name, o.product_code, o.quantity, o.unit_price, o.total_amount, o.status, o.delivery_date, o.notes, o.created_at, o.updated_at FROM orders o INNER JOIN (SELECT id FROM orders %s ORDER BY %s %s LIMIT %d OFFSET %d) sub ON o.id = sub.id ORDER BY o.%s %s",
+			where, sortCol, sortOrder, p.PerPage, offset, sortCol, sortOrder,
+		)
+		return query, args
+	}
+
 	query := fmt.Sprintf(
 		"SELECT id, order_number, order_type, order_date, customer_name, customer_code, product_name, product_code, quantity, unit_price, total_amount, status, delivery_date, notes, created_at, updated_at FROM orders %s ORDER BY %s %s LIMIT %d OFFSET %d",
 		where, sortCol, sortOrder, p.PerPage, offset,
