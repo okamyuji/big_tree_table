@@ -1,16 +1,16 @@
 package handler
 
 import (
-	"database/sql"
 	"encoding/json"
-	"math"
 	"net/http"
 	"strconv"
 
 	"bigtable-backend/model"
+	"bigtable-backend/service"
 )
 
-func OrdersHandler(db *sql.DB) http.HandlerFunc {
+// OrdersHandler creates an HTTP handler for the orders endpoint
+func OrdersHandler(svc service.OrderService) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -19,46 +19,10 @@ func OrdersHandler(db *sql.DB) http.HandlerFunc {
 
 		params := parseQueryParams(r)
 
-		// Count query
-		countQuery, countArgs := model.BuildCountQuery(params)
-		var total int64
-		if err := db.QueryRow(countQuery, countArgs...).Scan(&total); err != nil {
-			http.Error(w, "Database error", http.StatusInternalServerError)
-			return
-		}
-
-		// Data query
-		dataQuery, dataArgs := model.BuildQuery(params)
-		rows, err := db.Query(dataQuery, dataArgs...)
+		resp, err := svc.GetOrders(params)
 		if err != nil {
 			http.Error(w, "Database error", http.StatusInternalServerError)
 			return
-		}
-		defer rows.Close()
-
-		orders := make([]model.Order, 0)
-		for rows.Next() {
-			var o model.Order
-			if err := rows.Scan(
-				&o.ID, &o.OrderNumber, &o.OrderType, &o.OrderDate,
-				&o.CustomerName, &o.CustomerCode, &o.ProductName, &o.ProductCode,
-				&o.Quantity, &o.UnitPrice, &o.TotalAmount, &o.Status,
-				&o.DeliveryDate, &o.Notes, &o.CreatedAt, &o.UpdatedAt,
-			); err != nil {
-				http.Error(w, "Scan error", http.StatusInternalServerError)
-				return
-			}
-			orders = append(orders, o)
-		}
-
-		totalPages := int(math.Ceil(float64(total) / float64(params.PerPage)))
-
-		resp := model.OrdersResponse{
-			Data:       orders,
-			Total:      total,
-			Page:       params.Page,
-			PerPage:    params.PerPage,
-			TotalPages: totalPages,
 		}
 
 		w.Header().Set("Content-Type", "application/json")

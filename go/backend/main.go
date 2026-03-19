@@ -7,6 +7,8 @@ import (
 	"bigtable-backend/db"
 	"bigtable-backend/handler"
 	"bigtable-backend/middleware"
+	"bigtable-backend/repository"
+	"bigtable-backend/service"
 )
 
 func main() {
@@ -16,8 +18,11 @@ func main() {
 	}
 	defer conn.Close()
 
+	repo := repository.NewMySQLOrderRepository(conn)
+	svc := service.NewOrderService(repo)
+
 	mux := http.NewServeMux()
-	mux.HandleFunc("/api/orders", handler.OrdersHandler(conn))
+	mux.HandleFunc("/api/orders", handler.OrdersHandler(svc))
 
 	wrapped := middleware.CORS(mux)
 
