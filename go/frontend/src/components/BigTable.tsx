@@ -11,7 +11,7 @@ import { Pagination } from "./Pagination";
 const ROW_HEIGHT = 40;
 const TABLE_HEIGHT = 600;
 
-const ORDER_TYPE_OPTIONS = ["通常注文", "急ぎ注文", "定期注文", "特別注文"];
+const ORDER_TYPE_OPTIONS = ["受注", "発注"];
 const STATUS_OPTIONS = ["受注確認", "出荷準備中", "出荷済み", "納品完了", "キャンセル"];
 
 export function BigTable() {

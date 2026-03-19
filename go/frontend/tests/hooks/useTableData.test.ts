@@ -7,7 +7,7 @@ const mockResponse = {
     {
       id: 1,
       order_number: "ORD-001",
-      order_type: "通常注文",
+      order_type: "受注",
       order_date: "2024-01-01",
       customer_name: "テスト顧客",
       customer_code: "C001",

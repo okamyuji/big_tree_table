@@ -6,7 +6,7 @@ const mockOrders = [
   {
     id: 1,
     order_number: "ORD-001",
-    order_type: "通常注文",
+    order_type: "受注",
     order_date: "2024-01-01",
     customer_name: "テスト顧客A",
     customer_code: "C001",
@@ -24,7 +24,7 @@ const mockOrders = [
   {
     id: 2,
     order_number: "ORD-002",
-    order_type: "急ぎ注文",
+    order_type: "発注",
     order_date: "2024-01-02",
     customer_name: "テスト顧客B",
     customer_code: "C002",
