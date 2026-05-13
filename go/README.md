@@ -2,7 +2,7 @@
 
 100万件の受発注データを、顧客、商品、注文の階層で表示するTreeTableデモアプリケーションです。
 
-このリポジトリは、Reactの大規模テーブルと仮想スクロールを説明するためのBigTableアプリを、折りたたみ可能なTreeTable対応版として拡張したものです。バックエンドはMySQL上の100万件データをソート、フィルター、ページネーションし、TreeTable専用APIで `customer -> product -> order` の階層レスポンスを返します。フロントエンドはReactとTypeScriptで構築し、展開状態を反映した可視ノードだけを独自の仮想スクロールへ渡して描画します。
+このリポジトリは、Reactの大規模テーブルと仮想スクロールを説明するための[BigTableアプリ](https://github.com/okamyuji/BigTable)を、折りたたみ可能なTreeTable対応版として拡張したものです。バックエンドはMySQL上の100万件データをソート、フィルター、ページネーションし、TreeTable専用APIで `customer -> product -> order` の階層レスポンスを返します。フロントエンドはReactとTypeScriptで構築し、展開状態を反映した可視ノードだけを独自の仮想スクロールへ渡して描画します。
 
 ## 主な機能
 
