@@ -1,14 +1,14 @@
 services:
   mysql:
     image: mysql:8.0
-    container_name: bigtable-mysql
+    container_name: bigtreetable-mysql
     environment:
       MYSQL_ROOT_PASSWORD: rootpass
       MYSQL_DATABASE: bigtable
       MYSQL_CHARACTER_SET_SERVER: utf8mb4
       MYSQL_COLLATION_SERVER: utf8mb4_unicode_ci
     ports:
-      - "3306:3306"
+      - "3307:3306"
     volumes:
       - mysql-data:/var/lib/mysql
     healthcheck:
@@ -19,7 +19,7 @@ services:
 
   backend:
     build: ./backend
-    container_name: bigtable-backend
+    container_name: bigtreetable-backend
     environment:
       DB_HOST: mysql
       DB_PORT: "3306"
@@ -34,7 +34,7 @@ services:
 
   frontend:
     build: ./frontend
-    container_name: bigtable-frontend
+    container_name: bigtreetable-frontend
     ports:
       - "3000:80"
     depends_on:

@@ -1,9 +1,9 @@
-import { BigTable } from "./components/BigTable";
+import { TreeTable } from "./components/TreeTable";
 
 export default function App() {
   return (
     <div className="min-h-screen bg-gray-50">
-      <BigTable />
+      <TreeTable />
     </div>
   );
 }

@@ -30,6 +30,27 @@ func OrdersHandler(svc service.OrderService) http.HandlerFunc {
 	}
 }
 
+// OrderTreeHandler creates an HTTP handler for the tree table endpoint
+func OrderTreeHandler(svc service.OrderService) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+
+		params := parseQueryParams(r)
+
+		resp, err := svc.GetOrderTree(params)
+		if err != nil {
+			http.Error(w, "Database error", http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(resp)
+	}
+}
+
 func parseQueryParams(r *http.Request) model.QueryParams {
 	p := model.QueryParams{
 		Page:         parseIntParam(r, "page", 1),

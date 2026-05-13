@@ -47,6 +47,31 @@ type OrdersResponse struct {
 	TotalPages int     `json:"total_pages"`
 }
 
+type TreeSummary struct {
+	OrderCount  int      `json:"order_count"`
+	Quantity    int      `json:"quantity"`
+	TotalAmount float64  `json:"total_amount"`
+	Statuses    []string `json:"statuses"`
+}
+
+type OrderTreeNode struct {
+	ID       string          `json:"id"`
+	Kind     string          `json:"kind"`
+	Depth    int             `json:"depth"`
+	Label    string          `json:"label"`
+	Order    *Order          `json:"order,omitempty"`
+	Summary  TreeSummary     `json:"summary"`
+	Children []OrderTreeNode `json:"children"`
+}
+
+type OrderTreeResponse struct {
+	Data       []OrderTreeNode `json:"data"`
+	Total      int64           `json:"total"`
+	Page       int             `json:"page"`
+	PerPage    int             `json:"per_page"`
+	TotalPages int             `json:"total_pages"`
+}
+
 var allowedSortColumns = map[string]bool{
 	"id": true, "order_number": true, "order_type": true,
 	"order_date": true, "customer_name": true, "customer_code": true,
@@ -90,6 +115,74 @@ func BuildQuery(p QueryParams) (string, []any) {
 func BuildCountQuery(p QueryParams) (string, []any) {
 	where, args := buildWhere(p)
 	return fmt.Sprintf("SELECT COUNT(*) FROM orders %s", where), args
+}
+
+func BuildOrderTree(orders []Order) []OrderTreeNode {
+	customers := make([]OrderTreeNode, 0)
+	customerIndexes := make(map[string]int)
+	productIndexes := make(map[string]map[string]int)
+
+	for _, order := range orders {
+		customerID := "customer:" + order.CustomerCode
+		customerIndex, ok := customerIndexes[customerID]
+		if !ok {
+			customers = append(customers, OrderTreeNode{
+				ID:       customerID,
+				Kind:     "customer",
+				Depth:    0,
+				Label:    order.CustomerName,
+				Summary:  TreeSummary{Statuses: []string{}},
+				Children: []OrderTreeNode{},
+			})
+			customerIndex = len(customers) - 1
+			customerIndexes[customerID] = customerIndex
+			productIndexes[customerID] = make(map[string]int)
+		}
+
+		appendSummary(&customers[customerIndex].Summary, order)
+
+		productID := customerID + ":product:" + order.ProductCode
+		productIndex, ok := productIndexes[customerID][productID]
+		if !ok {
+			customers[customerIndex].Children = append(customers[customerIndex].Children, OrderTreeNode{
+				ID:       productID,
+				Kind:     "product",
+				Depth:    1,
+				Label:    order.ProductName,
+				Summary:  TreeSummary{Statuses: []string{}},
+				Children: []OrderTreeNode{},
+			})
+			productIndex = len(customers[customerIndex].Children) - 1
+			productIndexes[customerID][productID] = productIndex
+		}
+
+		productNode := &customers[customerIndex].Children[productIndex]
+		appendSummary(&productNode.Summary, order)
+		orderCopy := order
+		productNode.Children = append(productNode.Children, OrderTreeNode{
+			ID:       fmt.Sprintf("order:%d", order.ID),
+			Kind:     "order",
+			Depth:    2,
+			Label:    order.OrderNumber,
+			Order:    &orderCopy,
+			Summary:  TreeSummary{OrderCount: 1, Quantity: order.Quantity, TotalAmount: order.TotalAmount, Statuses: []string{order.Status}},
+			Children: []OrderTreeNode{},
+		})
+	}
+
+	return customers
+}
+
+func appendSummary(summary *TreeSummary, order Order) {
+	summary.OrderCount++
+	summary.Quantity += order.Quantity
+	summary.TotalAmount += order.TotalAmount
+	for _, status := range summary.Statuses {
+		if status == order.Status {
+			return
+		}
+	}
+	summary.Statuses = append(summary.Statuses, order.Status)
 }
 
 // datePattern validates YYYY-MM-DD format

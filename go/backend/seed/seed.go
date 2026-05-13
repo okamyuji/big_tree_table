@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"math/rand"
+	"os"
 	"strings"
 	"time"
 
@@ -44,7 +45,14 @@ var statuses = []string{"受注確認", "出荷準備中", "出荷済み", "納�
 var orderTypes = []string{"受注", "発注"}
 
 func main() {
-	dsn := "root:rootpass@tcp(localhost:3306)/bigtable?parseTime=true&charset=utf8mb4"
+	dsn := fmt.Sprintf(
+		"%s:%s@tcp(%s:%s)/%s?parseTime=true&charset=utf8mb4",
+		getEnv("DB_USER", "root"),
+		getEnv("DB_PASS", "rootpass"),
+		getEnv("DB_HOST", "localhost"),
+		getEnv("DB_PORT", "3306"),
+		getEnv("DB_NAME", "bigtable"),
+	)
 	db, err := sql.Open("mysql", dsn)
 	if err != nil {
 		log.Fatalf("Failed to connect: %v", err)
@@ -57,6 +65,13 @@ func main() {
 
 	createTable(db)
 	seedData(db)
+}
+
+func getEnv(key, fallback string) string {
+	if value := os.Getenv(key); value != "" {
+		return value
+	}
+	return fallback
 }
 
 func createTable(db *sql.DB) {

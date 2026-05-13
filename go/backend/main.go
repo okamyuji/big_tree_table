@@ -23,6 +23,7 @@ func main() {
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/orders", handler.OrdersHandler(svc))
+	mux.HandleFunc("/api/order-tree", handler.OrderTreeHandler(svc))
 
 	wrapped := middleware.CORS(mux)
 

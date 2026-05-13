@@ -4,3 +4,4 @@ dist/
 *.local
 .env
 backend/server
+frontend/e2e/*.png

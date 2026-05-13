@@ -135,3 +135,41 @@ func TestGetOrders_TotalPages(t *testing.T) {
 		})
 	}
 }
+
+func TestGetOrderTree_Success(t *testing.T) {
+	mock := &mockRepo{
+		countOrdersFn: func(params model.QueryParams) (int64, error) {
+			return 2, nil
+		},
+		findOrdersFn: func(params model.QueryParams) ([]model.Order, error) {
+			return []model.Order{
+				{
+					ID: 1, OrderNumber: "ORD-001", CustomerCode: "C001", CustomerName: "顧客A",
+					ProductCode: "P001", ProductName: "商品A", Quantity: 2, TotalAmount: 3000, Status: "受注確認",
+				},
+				{
+					ID: 2, OrderNumber: "ORD-002", CustomerCode: "C001", CustomerName: "顧客A",
+					ProductCode: "P001", ProductName: "商品A", Quantity: 3, TotalAmount: 4500, Status: "出荷済み",
+				},
+			}, nil
+		},
+	}
+
+	svc := NewOrderService(mock)
+	resp, err := svc.GetOrderTree(model.QueryParams{Page: 1, PerPage: 25, Sort: "id", Order: "asc"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if resp.Total != 2 {
+		t.Errorf("expected total=2, got %d", resp.Total)
+	}
+	if len(resp.Data) != 1 {
+		t.Fatalf("expected 1 root node, got %d", len(resp.Data))
+	}
+	if len(resp.Data[0].Children) != 1 {
+		t.Fatalf("expected 1 product child, got %d", len(resp.Data[0].Children))
+	}
+	if len(resp.Data[0].Children[0].Children) != 2 {
+		t.Errorf("expected 2 order leaves, got %d", len(resp.Data[0].Children[0].Children))
+	}
+}

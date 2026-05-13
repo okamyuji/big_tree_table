@@ -10,6 +10,7 @@ import (
 // OrderService defines the interface for order business logic
 type OrderService interface {
 	GetOrders(params model.QueryParams) (model.OrdersResponse, error)
+	GetOrderTree(params model.QueryParams) (model.OrderTreeResponse, error)
 }
 
 type orderService struct {
@@ -36,6 +37,28 @@ func (s *orderService) GetOrders(params model.QueryParams) (model.OrdersResponse
 
 	return model.OrdersResponse{
 		Data:       orders,
+		Total:      total,
+		Page:       params.Page,
+		PerPage:    params.PerPage,
+		TotalPages: totalPages,
+	}, nil
+}
+
+func (s *orderService) GetOrderTree(params model.QueryParams) (model.OrderTreeResponse, error) {
+	total, err := s.repo.CountOrders(params)
+	if err != nil {
+		return model.OrderTreeResponse{}, err
+	}
+
+	orders, err := s.repo.FindOrders(params)
+	if err != nil {
+		return model.OrderTreeResponse{}, err
+	}
+
+	totalPages := int(math.Ceil(float64(total) / float64(params.PerPage)))
+
+	return model.OrderTreeResponse{
+		Data:       model.BuildOrderTree(orders),
 		Total:      total,
 		Page:       params.Page,
 		PerPage:    params.PerPage,

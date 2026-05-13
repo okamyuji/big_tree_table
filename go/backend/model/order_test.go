@@ -157,3 +157,47 @@ func TestBuildCountQuery_WithFilters(t *testing.T) {
 		t.Errorf("expected WHERE status = ?, got %s", query)
 	}
 }
+
+func TestBuildOrderTree(t *testing.T) {
+	orders := []Order{
+		{
+			ID: 1, OrderNumber: "ORD-001", CustomerCode: "C001", CustomerName: "顧客A",
+			ProductCode: "P001", ProductName: "商品A", Quantity: 2, TotalAmount: 3000, Status: "受注確認",
+		},
+		{
+			ID: 2, OrderNumber: "ORD-002", CustomerCode: "C001", CustomerName: "顧客A",
+			ProductCode: "P001", ProductName: "商品A", Quantity: 3, TotalAmount: 4500, Status: "出荷済み",
+		},
+		{
+			ID: 3, OrderNumber: "ORD-003", CustomerCode: "C001", CustomerName: "顧客A",
+			ProductCode: "P002", ProductName: "商品B", Quantity: 5, TotalAmount: 8000, Status: "受注確認",
+		},
+	}
+
+	tree := BuildOrderTree(orders)
+	if len(tree) != 1 {
+		t.Fatalf("expected 1 customer node, got %d", len(tree))
+	}
+	customer := tree[0]
+	if customer.ID != "customer:C001" {
+		t.Errorf("unexpected customer id: %s", customer.ID)
+	}
+	if customer.Summary.OrderCount != 3 {
+		t.Errorf("expected customer order count 3, got %d", customer.Summary.OrderCount)
+	}
+	if customer.Summary.Quantity != 10 {
+		t.Errorf("expected quantity 10, got %d", customer.Summary.Quantity)
+	}
+	if len(customer.Children) != 2 {
+		t.Fatalf("expected 2 product nodes, got %d", len(customer.Children))
+	}
+	if len(customer.Children[0].Children) != 2 {
+		t.Errorf("expected first product to have 2 order children, got %d", len(customer.Children[0].Children))
+	}
+	if customer.Children[0].Children[0].Order == nil {
+		t.Fatal("expected order leaf to include order payload")
+	}
+	if customer.Children[0].Children[0].Order.OrderNumber != "ORD-001" {
+		t.Errorf("unexpected order number: %s", customer.Children[0].Children[0].Order.OrderNumber)
+	}
+}

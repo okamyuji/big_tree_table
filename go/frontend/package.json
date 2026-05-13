@@ -5,6 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vp dev",
+    "format": "vp fmt",
+    "test": "vp test -- --run",
+    "typecheck": "tsc -b",
     "build": "tsc -b && vp build",
     "lint": "eslint .",
     "preview": "vp preview"
