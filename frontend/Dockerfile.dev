@@ -1,0 +1,16 @@
+# Development image for the Vite dev server. Pairs with compose.yml.
+# Production stays on the root Dockerfile (nginx + static dist).
+FROM node:24-slim
+
+RUN corepack enable && corepack prepare pnpm@10.32.1 --activate
+
+WORKDIR /app
+
+COPY package.json pnpm-lock.yaml .npmrc ./
+RUN pnpm install --frozen-lockfile
+
+COPY . .
+
+EXPOSE 5173
+
+CMD ["pnpm", "dev", "--host", "0.0.0.0", "--port", "5173"]

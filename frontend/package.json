@@ -1,0 +1,48 @@
+{
+  "name": "vite-project",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vp dev",
+    "format": "vp fmt",
+    "test": "vp test -- --run",
+    "typecheck": "tsc -b",
+    "build": "tsc -b && vp build",
+    "lint": "eslint .",
+    "preview": "vp preview"
+  },
+  "dependencies": {
+    "@tailwindcss/vite": "4.2.2",
+    "@testing-library/jest-dom": "6.9.1",
+    "@testing-library/react": "16.3.2",
+    "jsdom": "29.0.0",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "tailwindcss": "4.2.2",
+    "vitest": "npm:@voidzero-dev/vite-plus-test@0.1.12"
+  },
+  "devDependencies": {
+    "@eslint/js": "9.39.4",
+    "@playwright/test": "1.58.2",
+    "@types/node": "24.12.0",
+    "@types/react": "19.2.14",
+    "@types/react-dom": "19.2.3",
+    "@vitejs/plugin-react": "6.0.1",
+    "eslint": "9.39.4",
+    "eslint-plugin-react-hooks": "7.0.1",
+    "eslint-plugin-react-refresh": "0.5.2",
+    "globals": "17.4.0",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.57.1",
+    "vite": "npm:@voidzero-dev/vite-plus-core@0.1.12",
+    "vite-plus": "0.1.12"
+  },
+  "packageManager": "pnpm@10.32.1",
+  "pnpm": {
+    "overrides": {
+      "vite": "npm:@voidzero-dev/vite-plus-core@0.1.12",
+      "vitest": "npm:@voidzero-dev/vite-plus-test@0.1.12"
+    }
+  }
+}

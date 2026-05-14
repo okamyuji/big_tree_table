@@ -1,0 +1,22 @@
+# Run with:
+#   pre-commit install                                   # one-time
+#   pre-commit run --all-files                           # ad-hoc full sweep
+#   git commit                                           # auto-runs on staged files
+#
+# CI mirrors these hooks in .github/workflows/ci.yml.
+repos:
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.30.4
+    hooks:
+      - id: gitleaks
+        # Scan staged content (the default) plus the working tree as a safety net.
+        args: ["--redact", "--no-banner", "--verbose"]
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        args: ["--maxkb=1024"]

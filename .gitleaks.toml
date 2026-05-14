@@ -1,0 +1,20 @@
+# Gitleaks config — extends the default ruleset and adds project-specific
+# allowlist entries for the dev MySQL container password fixture.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Allow committed dev fixtures and tapioca-generated RBI noise"
+paths = [
+  '''sorbet/rbi/.*''',
+  '''Gemfile\.lock''',
+  '''pnpm-lock\.yaml''',
+  '''frontend/pnpm-lock\.yaml''',
+  '''public/assets/.*''',
+]
+regexes = [
+  # The MySQL dev container is documented to use root/password — that string
+  # appears in README, database.yml fallback, and compose.yml on purpose.
+  '''DB_PASSWORD.*"password"''',
+  '''MYSQL_ROOT_PASSWORD: password''',
+]

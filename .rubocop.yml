@@ -1,0 +1,61 @@
+# typed: false
+# rubocop-rails-omakase is the Rails default style. We add minitest +
+# performance plugins, and relax a handful of cops that fight the
+# implementation choices in this project (e.g. multi-line WHERE chains in
+# Order.search, deferred-join helper that intentionally defines class methods
+# next to one another).
+inherit_gem:
+  rubocop-rails-omakase: rubocop.yml
+
+plugins:
+  - rubocop-minitest
+  - rubocop-performance
+
+AllCops:
+  TargetRubyVersion: 3.4
+  NewCops: enable
+  SuggestExtensions: false
+  Exclude:
+    - "bin/**/*"
+    - "db/schema.rb"
+    - "db/migrate/*.rb"
+    - "node_modules/**/*"
+    - "vendor/**/*"
+    - "tmp/**/*"
+    - "log/**/*"
+    - "sorbet/**/*"
+    - "config/initializers/cors.rb"
+    - "test/fixtures/**/*"
+    - "config/environments/*.rb"
+    - "config/application.rb"
+    - "config/puma.rb"
+    - "config/boot.rb"
+    - "config/environment.rb"
+    - "config/routes.rb"
+    - "Gemfile"
+
+Layout/LineLength:
+  Max: 140
+
+Metrics/MethodLength:
+  Max: 40
+  Exclude:
+    - "test/**/*"
+
+Metrics/ClassLength:
+  Max: 250
+
+Metrics/AbcSize:
+  Max: 40
+
+Metrics/BlockLength:
+  Exclude:
+    - "test/**/*"
+    - "db/seeds.rb"
+    - "config/routes.rb"
+
+Style/Documentation:
+  Enabled: false
+
+Minitest/MultipleAssertions:
+  Max: 15

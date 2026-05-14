@@ -1,0 +1,54 @@
+# typed: false
+# Small, hand-written fixture set. Most behavioural tests build their own data
+# via insert_all because they need volume / specific orderings, but a few
+# happy-path tests use these named records.
+order_one:
+  order_number: ORD-FIX-0000000001
+  order_type: standard
+  order_date: 2026-01-15
+  customer_name: Customer 0001
+  customer_code: CUST-00001
+  product_name: Product 001
+  product_code: PROD-00001
+  quantity: 2
+  unit_price: 1500.00
+  total_amount: 3000.00
+  status: confirmed
+  delivery_date: 2026-01-20
+  notes: ""
+  created_at: 2026-01-15 09:00:00
+  updated_at: 2026-01-15 09:00:00
+
+order_two:
+  order_number: ORD-FIX-0000000002
+  order_type: rush
+  order_date: 2026-02-20
+  customer_name: Customer 0002
+  customer_code: CUST-00002
+  product_name: Product 002
+  product_code: PROD-00002
+  quantity: 5
+  unit_price: 800.00
+  total_amount: 4000.00
+  status: shipped
+  delivery_date: 2026-02-22
+  notes: rush delivery
+  created_at: 2026-02-20 10:00:00
+  updated_at: 2026-02-20 10:00:00
+
+order_three_like_match:
+  order_number: ORD-FIX-0000000003
+  order_type: standard
+  order_date: 2026-03-10
+  customer_name: ACME 100% Corp
+  customer_code: CUST-00099
+  product_name: Widget_X
+  product_code: PROD-00099
+  quantity: 1
+  unit_price: 99.99
+  total_amount: 99.99
+  status: pending
+  delivery_date:
+  notes: ""
+  created_at: 2026-03-10 11:00:00
+  updated_at: 2026-03-10 11:00:00

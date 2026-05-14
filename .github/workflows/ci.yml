@@ -1,0 +1,107 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  gitleaks:
+    name: gitleaks (secret scan)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          # Full history so gitleaks can scan every commit on PRs.
+          fetch-depth: 0
+      - name: gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITLEAKS_CONFIG: .gitleaks.toml
+
+  quality:
+    name: rubocop · sorbet · brakeman · audit · tests · build
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: password
+          MYSQL_DATABASE: big_tree_table_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -ppassword"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+    env:
+      RAILS_ENV: test
+      DB_HOST: 127.0.0.1
+      DB_PORT: 3306
+      DB_USER: root
+      DB_PASSWORD: password
+      CI: "true"
+
+    steps:
+      - name: Install MySQL client
+        run: sudo apt-get update && sudo apt-get install --no-install-recommends -y default-libmysqlclient-dev default-mysql-client
+
+      - uses: actions/checkout@v5
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true     # cache + install gems
+
+      - name: Set up Node (for assets:precompile sanity)
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24
+
+      - name: Wait for MySQL
+        run: |
+          for i in {1..30}; do
+            if mysqladmin ping -h 127.0.0.1 -uroot -ppassword --silent; then
+              echo "mysql up"; exit 0
+            fi
+            sleep 2
+          done
+          echo "mysql never came up"; exit 1
+
+      - name: Prepare database
+        run: bin/rails db:create db:schema:load
+
+      - name: Run unified quality gate (rubocop · srb tc · brakeman · audit · tests · build)
+        run: bin/quality
+
+  frontend:
+    name: frontend (typecheck · lint · vitest)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec tsc -b
+      - run: pnpm exec eslint .
+      - run: pnpm test

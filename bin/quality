@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+#
+# Aggregate quality gate for big_tree_table.
+#
+# Runs every gate the project commits to:
+#   1. rubocop      — formatter + lint (rubocop-rails-omakase + minitest + performance)
+#   2. srb tc       — Sorbet static type check
+#   3. brakeman     — Rails security scanner
+#   4. bundler-audit — known-CVE scan against the lockfile
+#   5. rails test   — Minitest suite, gated by SimpleCov >= 80%
+#   6. assets       — production asset precompile (build smoke)
+#
+# Exits non-zero on the first failing gate so CI/local feedback is fast.
+set -euo pipefail
+
+cd "$(dirname "$0")/.."
+
+run() {
+  local label="$1"; shift
+  echo ""
+  echo "================================================================"
+  echo "▶ $label"
+  echo "  \$ $*"
+  echo "================================================================"
+  "$@"
+}
+
+run "format + lint  (rubocop)"          bundle exec rubocop --no-color
+run "type check     (srb tc)"           bundle exec srb tc
+run "security scan  (brakeman)"         bundle exec brakeman --no-pager --quiet --exit-on-warn --exit-on-error
+run "deps audit     (bundler-audit)"    bundle exec bundler-audit check --update
+run "tests + cov    (rails test)"       bin/rails test
+run "build          (assets:precompile)" bin/rails assets:precompile
+
+echo ""
+echo "================================================================"
+echo "✓ all quality gates passed"
+echo "================================================================"

@@ -1,0 +1,35 @@
+# syntax=docker/dockerfile:1
+# check=error=true
+#
+# Development Dockerfile for the Rails backend — pairs with compose.yml.
+# Production builds still use the root-level Dockerfile (Rails default).
+ARG RUBY_VERSION=3.4.8
+FROM docker.io/library/ruby:${RUBY_VERSION}-slim
+
+ENV LANG=C.UTF-8 \
+    BUNDLE_PATH=/usr/local/bundle \
+    BUNDLE_JOBS=4 \
+    BUNDLE_RETRY=3 \
+    RAILS_ENV=development
+
+WORKDIR /rails
+
+RUN apt-get update -qq && \
+    apt-get install --no-install-recommends -y \
+      build-essential \
+      curl \
+      git \
+      default-libmysqlclient-dev \
+      default-mysql-client \
+      libyaml-dev \
+      pkg-config && \
+    rm -rf /var/lib/apt/lists /var/cache/apt/archives
+
+COPY Gemfile Gemfile.lock ./
+RUN bundle install
+
+COPY . .
+
+EXPOSE 3000
+
+CMD ["bin/rails", "server", "-b", "0.0.0.0", "-p", "3000"]
