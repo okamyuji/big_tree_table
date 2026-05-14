@@ -25,6 +25,9 @@ jobs:
       - name: gitleaks
         uses: gitleaks/gitleaks-action@v2
         env:
+          # Required since gitleaks-action v2 for pull_request scans —
+          # the action calls the GitHub API to enumerate PR commits.
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GITLEAKS_CONFIG: .gitleaks.toml
 
   quality:
