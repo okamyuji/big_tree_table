@@ -2,8 +2,10 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook, act, waitFor } from "@testing-library/react";
 import { useTableData } from "../../src/hooks/useTableData";
 
+// Rails wraps the list response in { orders, meta } and serialises
+// BigDecimal as a string — keep the mock aligned with that shape.
 const mockResponse = {
-  data: [
+  orders: [
     {
       id: 1,
       order_number: "ORD-001",
@@ -14,8 +16,8 @@ const mockResponse = {
       product_name: "テスト商品",
       product_code: "P001",
       quantity: 10,
-      unit_price: 1000,
-      total_amount: 10000,
+      unit_price: "1000.0",
+      total_amount: "10000.0",
       status: "受注確認",
       delivery_date: "2024-01-15",
       notes: "",
@@ -23,10 +25,12 @@ const mockResponse = {
       updated_at: "2024-01-01T00:00:00Z",
     },
   ],
-  total: 100,
-  page: 1,
-  per_page: 25,
-  total_pages: 4,
+  meta: {
+    total: 100,
+    page: 1,
+    per_page: 25,
+    total_pages: 4,
+  },
 };
 
 beforeEach(() => {
@@ -54,7 +58,7 @@ describe("useTableData", () => {
       expect(result.current.loading).toBe(false);
     });
 
-    expect(result.current.data).toEqual(mockResponse.data);
+    expect(result.current.data).toEqual(mockResponse.orders);
     expect(result.current.total).toBe(100);
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });

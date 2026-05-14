@@ -8,21 +8,21 @@ const tree: OrderTreeNode[] = [
     kind: "customer",
     depth: 0,
     label: "顧客A",
-    summary: { order_count: 2, quantity: 5, total_amount: 7500, statuses: ["受注確認"] },
+    summary: { order_count: 2, quantity: 5, total_amount: "7500.0", statuses: ["受注確認"] },
     children: [
       {
         id: "customer:C001:product:P001",
         kind: "product",
         depth: 1,
         label: "商品A",
-        summary: { order_count: 2, quantity: 5, total_amount: 7500, statuses: ["受注確認"] },
+        summary: { order_count: 2, quantity: 5, total_amount: "7500.0", statuses: ["受注確認"] },
         children: [
           {
             id: "order:1",
             kind: "order",
             depth: 2,
             label: "ORD-001",
-            summary: { order_count: 1, quantity: 2, total_amount: 3000, statuses: ["受注確認"] },
+            summary: { order_count: 1, quantity: 2, total_amount: "3000.0", statuses: ["受注確認"] },
             children: [],
           },
         ],

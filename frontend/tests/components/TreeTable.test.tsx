@@ -2,20 +2,22 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { TreeTable } from "../../src/components/TreeTable";
 
+// Rails serialises BigDecimal as a string and wraps the tree in
+// { tree, meta } — keep these mocks aligned with that shape.
 const mockTree = [
   {
     id: "customer:C001",
     kind: "customer",
     depth: 0,
     label: "テスト顧客A",
-    summary: { order_count: 1, quantity: 10, total_amount: 10000, statuses: ["受注確認"] },
+    summary: { order_count: 1, quantity: 10, total_amount: "10000.0", statuses: ["受注確認"] },
     children: [
       {
         id: "customer:C001:product:P001",
         kind: "product",
         depth: 1,
         label: "テスト商品A",
-        summary: { order_count: 1, quantity: 10, total_amount: 10000, statuses: ["受注確認"] },
+        summary: { order_count: 1, quantity: 10, total_amount: "10000.0", statuses: ["受注確認"] },
         children: [
           {
             id: "order:1",
@@ -32,15 +34,15 @@ const mockTree = [
               product_name: "テスト商品A",
               product_code: "P001",
               quantity: 10,
-              unit_price: 1000,
-              total_amount: 10000,
+              unit_price: "1000.0",
+              total_amount: "10000.0",
               status: "受注確認",
               delivery_date: "2024-01-15",
               notes: "",
               created_at: "2024-01-01T00:00:00Z",
               updated_at: "2024-01-01T00:00:00Z",
             },
-            summary: { order_count: 1, quantity: 10, total_amount: 10000, statuses: ["受注確認"] },
+            summary: { order_count: 1, quantity: 10, total_amount: "10000.0", statuses: ["受注確認"] },
             children: [],
           },
         ],
@@ -55,11 +57,13 @@ beforeEach(() => {
     ok: true,
     json: () =>
       Promise.resolve({
-        data: mockTree,
-        total: 1,
-        page: 1,
-        per_page: 25,
-        total_pages: 1,
+        tree: mockTree,
+        meta: {
+          total: 1,
+          page: 1,
+          per_page: 25,
+          total_pages: 1,
+        },
       }),
   });
 });
@@ -73,7 +77,7 @@ describe("TreeTable", () => {
     });
 
     expect(globalThis.fetch).toHaveBeenCalledWith(
-      expect.stringContaining("/api/order-tree?"),
+      expect.stringContaining("/api/v1/orders/tree?"),
       expect.any(Object),
     );
   });

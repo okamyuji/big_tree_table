@@ -2,6 +2,8 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import { BigTable } from "../../src/components/BigTable";
 
+// Rails serialises BigDecimal as a string and wraps the list in
+// { orders, meta } — keep these mocks aligned with that shape.
 const mockOrders = [
   {
     id: 1,
@@ -13,8 +15,8 @@ const mockOrders = [
     product_name: "テスト商品A",
     product_code: "P001",
     quantity: 10,
-    unit_price: 1000,
-    total_amount: 10000,
+    unit_price: "1000.0",
+    total_amount: "10000.0",
     status: "受注確認",
     delivery_date: "2024-01-15",
     notes: "",
@@ -31,8 +33,8 @@ const mockOrders = [
     product_name: "テスト商品B",
     product_code: "P002",
     quantity: 5,
-    unit_price: 2000,
-    total_amount: 10000,
+    unit_price: "2000.0",
+    total_amount: "10000.0",
     status: "出荷済み",
     delivery_date: "2024-01-16",
     notes: "",
@@ -47,11 +49,13 @@ beforeEach(() => {
     ok: true,
     json: () =>
       Promise.resolve({
-        data: mockOrders,
-        total: 2,
-        page: 1,
-        per_page: 25,
-        total_pages: 1,
+        orders: mockOrders,
+        meta: {
+          total: 2,
+          page: 1,
+          per_page: 25,
+          total_pages: 1,
+        },
       }),
   });
 });
