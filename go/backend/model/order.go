@@ -72,26 +72,55 @@ type OrderTreeResponse struct {
 	TotalPages int             `json:"total_pages"`
 }
 
-var allowedSortColumns = map[string]bool{
-	"id": true, "order_number": true, "order_type": true,
-	"order_date": true, "customer_name": true, "customer_code": true,
-	"product_name": true, "product_code": true, "quantity": true,
-	"unit_price": true, "total_amount": true, "status": true,
-	"delivery_date": true, "created_at": true,
+// sanitizeSortColumn maps a user-supplied sort key to a literal column name.
+// 各caseでリテラル文字列を返すことで、ユーザー入力からSQL文へのテイント
+// 伝播を遮断し、CodeQLのSQLインジェクション検出に対しても安全とする。
+func sanitizeSortColumn(s string) string {
+	switch s {
+	case "order_number":
+		return "order_number"
+	case "order_type":
+		return "order_type"
+	case "order_date":
+		return "order_date"
+	case "customer_name":
+		return "customer_name"
+	case "customer_code":
+		return "customer_code"
+	case "product_name":
+		return "product_name"
+	case "product_code":
+		return "product_code"
+	case "quantity":
+		return "quantity"
+	case "unit_price":
+		return "unit_price"
+	case "total_amount":
+		return "total_amount"
+	case "status":
+		return "status"
+	case "delivery_date":
+		return "delivery_date"
+	case "created_at":
+		return "created_at"
+	}
+	return "id"
+}
+
+// sanitizeSortOrder returns a literal "ASC"/"DESC" string to defeat taint tracking.
+func sanitizeSortOrder(s string) string {
+	if strings.ToLower(s) == "desc" {
+		return "DESC"
+	}
+	return "ASC"
 }
 
 const offsetThreshold = 10000
 
 func BuildQuery(p QueryParams) (string, []any) {
 	where, args := buildWhere(p)
-	sortCol := "id"
-	if allowedSortColumns[p.Sort] {
-		sortCol = p.Sort
-	}
-	sortOrder := "ASC"
-	if strings.ToLower(p.Order) == "desc" {
-		sortOrder = "DESC"
-	}
+	sortCol := sanitizeSortColumn(p.Sort)
+	sortOrder := sanitizeSortOrder(p.Order)
 	offset := (p.Page - 1) * p.PerPage
 
 	// OFFSETが大きい場合はdeferred joinで最適化する。
