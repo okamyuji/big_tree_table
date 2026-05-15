@@ -77,6 +77,8 @@ type OrderTreeResponse struct {
 // 伝播を遮断し、CodeQLのSQLインジェクション検出に対しても安全とする。
 func sanitizeSortColumn(s string) string {
 	switch s {
+	case "id":
+		return "id"
 	case "order_number":
 		return "order_number"
 	case "order_type":
