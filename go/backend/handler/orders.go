@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 	"strconv"
 
@@ -25,8 +26,7 @@ func OrdersHandler(svc service.OrderService) http.HandlerFunc {
 			return
 		}
 
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(resp)
+		writeJSON(w, resp)
 	}
 }
 
@@ -46,10 +46,22 @@ func OrderTreeHandler(svc service.OrderService) http.HandlerFunc {
 			return
 		}
 
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(resp)
+		writeJSON(w, resp)
 	}
 }
+
+// writeJSON encodes resp as JSON. encode 失敗 (例: クライアント切断) は
+// 無視せず log に残し、レスポンスステータスの矛盾を防ぐ。
+func writeJSON(w http.ResponseWriter, resp any) {
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(resp); err != nil {
+		log.Printf("failed to encode response: %v", err)
+	}
+}
+
+// maxPage は (Page-1)*PerPage の整数オーバーフローおよび過大OFFSETによる
+// DoS を防ぐための上限。100 万件 × PerPage 100 = OFFSET 1 億までは到達可能。
+const maxPage = 1_000_000
 
 func parseQueryParams(r *http.Request) model.QueryParams {
 	p := model.QueryParams{
@@ -66,6 +78,9 @@ func parseQueryParams(r *http.Request) model.QueryParams {
 	}
 	if p.Page < 1 {
 		p.Page = 1
+	}
+	if p.Page > maxPage {
+		p.Page = maxPage
 	}
 	if p.PerPage < 1 {
 		p.PerPage = 1

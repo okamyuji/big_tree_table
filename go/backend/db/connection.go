@@ -12,7 +12,9 @@ func Connect() (*sql.DB, error) {
 	host := getEnv("DB_HOST", "localhost")
 	port := getEnv("DB_PORT", "3306")
 	user := getEnv("DB_USER", "root")
-	pass := getEnv("DB_PASS", "rootpass")
+	// パスワードはハードコードしない。未設定時は空文字となり、
+	// 環境に応じて env / .env で必ず設定する運用とする。
+	pass := os.Getenv("DB_PASS")
 	name := getEnv("DB_NAME", "bigtable")
 
 	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?parseTime=true&charset=utf8mb4", user, pass, host, port, name)

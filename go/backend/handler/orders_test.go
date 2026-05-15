@@ -63,3 +63,13 @@ func TestParseQueryParams_ZeroPerPage(t *testing.T) {
 		t.Errorf("expected per_page clamped to 1, got %d", p.PerPage)
 	}
 }
+
+func TestParseQueryParams_PageUpperBoundClamped(t *testing.T) {
+	// 過大な page を投げても (page-1)*per_page で int overflow しないよう
+	// 上限 maxPage にクランプされることを確認する。
+	r, _ := http.NewRequest("GET", "/api/orders?page=9999999999", nil)
+	p := parseQueryParams(r)
+	if p.Page != maxPage {
+		t.Errorf("expected page clamped to %d, got %d", maxPage, p.Page)
+	}
+}
