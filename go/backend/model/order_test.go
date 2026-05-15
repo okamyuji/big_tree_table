@@ -5,6 +5,49 @@ import (
 	"testing"
 )
 
+func TestQueryParams_Normalize(t *testing.T) {
+	cases := []struct {
+		name string
+		in   QueryParams
+		want QueryParams
+	}{
+		{
+			name: "defaults applied to empty struct",
+			in:   QueryParams{},
+			want: QueryParams{Page: 1, PerPage: 1, Sort: "id", Order: "asc"},
+		},
+		{
+			name: "page below 1 clamped up",
+			in:   QueryParams{Page: -5, PerPage: 50, Sort: "id", Order: "asc"},
+			want: QueryParams{Page: 1, PerPage: 50, Sort: "id", Order: "asc"},
+		},
+		{
+			name: "page above MaxPage clamped down",
+			in:   QueryParams{Page: MaxPage + 1, PerPage: 50, Sort: "id", Order: "asc"},
+			want: QueryParams{Page: MaxPage, PerPage: 50, Sort: "id", Order: "asc"},
+		},
+		{
+			name: "per_page above MaxPerPage clamped down",
+			in:   QueryParams{Page: 1, PerPage: 999, Sort: "id", Order: "asc"},
+			want: QueryParams{Page: 1, PerPage: MaxPerPage, Sort: "id", Order: "asc"},
+		},
+		{
+			name: "valid values preserved",
+			in:   QueryParams{Page: 5, PerPage: 25, Sort: "order_date", Order: "desc"},
+			want: QueryParams{Page: 5, PerPage: 25, Sort: "order_date", Order: "desc"},
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			got := c.in
+			got.Normalize()
+			if got != c.want {
+				t.Errorf("Normalize() = %#v, want %#v", got, c.want)
+			}
+		})
+	}
+}
+
 func TestBuildQuery_NoFilters(t *testing.T) {
 	p := QueryParams{Page: 1, PerPage: 50, Sort: "id", Order: "asc"}
 	query, args := BuildQuery(p)

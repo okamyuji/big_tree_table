@@ -3,6 +3,8 @@ package handler
 import (
 	"net/http"
 	"testing"
+
+	"bigtable-backend/model"
 )
 
 func TestParseQueryParams_Defaults(t *testing.T) {
@@ -66,10 +68,12 @@ func TestParseQueryParams_ZeroPerPage(t *testing.T) {
 
 func TestParseQueryParams_PageUpperBoundClamped(t *testing.T) {
 	// 過大な page を投げても (page-1)*per_page で int overflow しないよう
-	// 上限 maxPage にクランプされることを確認する。
-	r, _ := http.NewRequest("GET", "/api/orders?page=9999999999", nil)
+	// 上限 model.MaxPage にクランプされることを確認する。
+	// 32bit 環境でも strconv.Atoi が成功するよう int32 範囲内かつ
+	// MaxPage を確実に超える値を使う (2_000_000 > MaxPage=1_000_000)。
+	r, _ := http.NewRequest("GET", "/api/orders?page=2000000", nil)
 	p := parseQueryParams(r)
-	if p.Page != maxPage {
-		t.Errorf("expected page clamped to %d, got %d", maxPage, p.Page)
+	if p.Page != model.MaxPage {
+		t.Errorf("expected page clamped to %d, got %d", model.MaxPage, p.Page)
 	}
 }

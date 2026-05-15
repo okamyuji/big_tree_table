@@ -50,18 +50,16 @@ func OrderTreeHandler(svc service.OrderService) http.HandlerFunc {
 	}
 }
 
-// writeJSON encodes resp as JSON. encode 失敗 (例: クライアント切断) は
-// 無視せず log に残し、レスポンスステータスの矛盾を防ぐ。
+// writeJSON encodes resp as JSON. json.NewEncoder は ResponseWriter に直接
+// 書き込むため、エンコード失敗時点で既に HTTP 200 が送信済みでありステータス
+// 矛盾は防げない。ここではエラーを握り潰さず log に残し、不完全な
+// レスポンス送出を運用上検知可能にすることを目的とする。
 func writeJSON(w http.ResponseWriter, resp any) {
 	w.Header().Set("Content-Type", "application/json")
 	if err := json.NewEncoder(w).Encode(resp); err != nil {
 		log.Printf("failed to encode response: %v", err)
 	}
 }
-
-// maxPage は (Page-1)*PerPage の整数オーバーフローおよび過大OFFSETによる
-// DoS を防ぐための上限。100 万件 × PerPage 100 = OFFSET 1 億までは到達可能。
-const maxPage = 1_000_000
 
 func parseQueryParams(r *http.Request) model.QueryParams {
 	p := model.QueryParams{
@@ -76,24 +74,9 @@ func parseQueryParams(r *http.Request) model.QueryParams {
 		DateFrom:     r.URL.Query().Get("date_from"),
 		DateTo:       r.URL.Query().Get("date_to"),
 	}
-	if p.Page < 1 {
-		p.Page = 1
-	}
-	if p.Page > maxPage {
-		p.Page = maxPage
-	}
-	if p.PerPage < 1 {
-		p.PerPage = 1
-	}
-	if p.PerPage > 100 {
-		p.PerPage = 100
-	}
-	if p.Sort == "" {
-		p.Sort = "id"
-	}
-	if p.Order == "" {
-		p.Order = "asc"
-	}
+	// クランプ/デフォルト適用は model 側に集約し、handler を含むすべての
+	// QueryParams 利用箇所で同じ安全範囲が保証されるようにする。
+	p.Normalize()
 	return p
 }
 
