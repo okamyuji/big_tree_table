@@ -39,6 +39,38 @@ type QueryParams struct {
 	DateTo       string
 }
 
+// MaxPage は (Page-1)*PerPage の整数オーバーフローおよび過大OFFSETによる
+// DoS を防ぐための上限。100 万件 × PerPage 100 = OFFSET 1 億までは到達可能。
+const MaxPage = 1_000_000
+
+// MaxPerPage は 1 ページあたりの最大件数。
+const MaxPerPage = 100
+
+// Normalize clamps QueryParams to safe ranges so that downstream BuildQuery /
+// BuildCountQuery にユーザー入力由来の不正値 (負数 OFFSET の原因となる過大 Page、
+// 範囲外 PerPage、空の Sort/Order) が流入しないことを保証する。
+// QueryParams を組み立てた呼び出し側は BuildQuery 前に必ずこのメソッドを呼ぶこと。
+func (p *QueryParams) Normalize() {
+	if p.Page < 1 {
+		p.Page = 1
+	}
+	if p.Page > MaxPage {
+		p.Page = MaxPage
+	}
+	if p.PerPage < 1 {
+		p.PerPage = 1
+	}
+	if p.PerPage > MaxPerPage {
+		p.PerPage = MaxPerPage
+	}
+	if p.Sort == "" {
+		p.Sort = "id"
+	}
+	if p.Order == "" {
+		p.Order = "asc"
+	}
+}
+
 type OrdersResponse struct {
 	Data       []Order `json:"data"`
 	Total      int64   `json:"total"`

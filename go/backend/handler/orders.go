@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 	"strconv"
 
@@ -25,8 +26,7 @@ func OrdersHandler(svc service.OrderService) http.HandlerFunc {
 			return
 		}
 
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(resp)
+		writeJSON(w, resp)
 	}
 }
 
@@ -46,8 +46,18 @@ func OrderTreeHandler(svc service.OrderService) http.HandlerFunc {
 			return
 		}
 
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(resp)
+		writeJSON(w, resp)
+	}
+}
+
+// writeJSON encodes resp as JSON. json.NewEncoder は ResponseWriter に直接
+// 書き込むため、エンコード失敗時点で既に HTTP 200 が送信済みでありステータス
+// 矛盾は防げない。ここではエラーを握り潰さず log に残し、不完全な
+// レスポンス送出を運用上検知可能にすることを目的とする。
+func writeJSON(w http.ResponseWriter, resp any) {
+	w.Header().Set("Content-Type", "application/json")
+	if err := json.NewEncoder(w).Encode(resp); err != nil {
+		log.Printf("failed to encode response: %v", err)
 	}
 }
 
@@ -64,21 +74,9 @@ func parseQueryParams(r *http.Request) model.QueryParams {
 		DateFrom:     r.URL.Query().Get("date_from"),
 		DateTo:       r.URL.Query().Get("date_to"),
 	}
-	if p.Page < 1 {
-		p.Page = 1
-	}
-	if p.PerPage < 1 {
-		p.PerPage = 1
-	}
-	if p.PerPage > 100 {
-		p.PerPage = 100
-	}
-	if p.Sort == "" {
-		p.Sort = "id"
-	}
-	if p.Order == "" {
-		p.Order = "asc"
-	}
+	// クランプ/デフォルト適用は model 側に集約し、handler を含むすべての
+	// QueryParams 利用箇所で同じ安全範囲が保証されるようにする。
+	p.Normalize()
 	return p
 }
 

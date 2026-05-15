@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"net/http"
+	"time"
 
 	"bigtable-backend/db"
 	"bigtable-backend/handler"
@@ -27,8 +28,20 @@ func main() {
 
 	wrapped := middleware.CORS(mux)
 
+	// Slowloris DoS 対策のためタイムアウトを明示的に設定する。
+	// http.ListenAndServe をそのまま使うと各タイムアウトが 0 (= 無制限) となり、
+	// ヘッダ／ボディを極端に遅く送る攻撃でハンドラ枠を簡単に枯渇させられる。
+	srv := &http.Server{
+		Addr:              ":8080",
+		Handler:           wrapped,
+		ReadHeaderTimeout: 10 * time.Second,
+		ReadTimeout:       30 * time.Second,
+		WriteTimeout:      30 * time.Second,
+		IdleTimeout:       60 * time.Second,
+	}
+
 	log.Println("Server starting on :8080")
-	if err := http.ListenAndServe(":8080", wrapped); err != nil {
+	if err := srv.ListenAndServe(); err != nil {
 		log.Fatalf("Server failed: %v", err)
 	}
 }
