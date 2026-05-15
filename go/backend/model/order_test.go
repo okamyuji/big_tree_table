@@ -51,8 +51,12 @@ func TestQueryParams_Normalize(t *testing.T) {
 func TestBuildQuery_NoFilters(t *testing.T) {
 	p := QueryParams{Page: 1, PerPage: 50, Sort: "id", Order: "asc"}
 	query, args := BuildQuery(p)
-	if len(args) != 0 {
-		t.Errorf("expected 0 args, got %d", len(args))
+	// pageSize と offset の2つだけ bind される
+	if len(args) != 2 {
+		t.Errorf("expected 2 args (limit, offset), got %d", len(args))
+	}
+	if args[0] != 50 || args[1] != 0 {
+		t.Errorf("expected args [50, 0], got %v", args)
 	}
 	if strings.Contains(query, "WHERE") {
 		t.Error("expected no WHERE clause")
@@ -60,19 +64,24 @@ func TestBuildQuery_NoFilters(t *testing.T) {
 	if !strings.Contains(query, "ORDER BY id ASC") {
 		t.Errorf("expected ORDER BY id ASC, got %s", query)
 	}
-	if !strings.Contains(query, "LIMIT 50 OFFSET 0") {
-		t.Errorf("expected LIMIT 50 OFFSET 0, got %s", query)
+	if !strings.Contains(query, "LIMIT ? OFFSET ?") {
+		t.Errorf("expected LIMIT ? OFFSET ?, got %s", query)
+	}
+	// SELECT * 撲滅: カラムを明示していること
+	if strings.Contains(query, "SELECT *") || strings.Contains(query, "SELECT o.*") {
+		t.Errorf("expected explicit column list, got %s", query)
 	}
 }
 
 func TestBuildQuery_WithStatusFilter(t *testing.T) {
 	p := QueryParams{Page: 1, PerPage: 50, Sort: "id", Order: "asc", Status: "受注確認"}
 	query, args := BuildQuery(p)
-	if len(args) != 1 {
-		t.Errorf("expected 1 arg, got %d", len(args))
+	// status + limit + offset で 3 つ
+	if len(args) != 3 {
+		t.Errorf("expected 3 args (status, limit, offset), got %d", len(args))
 	}
 	if args[0] != "受注確認" {
-		t.Errorf("expected arg '受注確認', got %v", args[0])
+		t.Errorf("expected first arg '受注確認', got %v", args[0])
 	}
 	if !strings.Contains(query, "WHERE status = ?") {
 		t.Errorf("expected WHERE status = ?, got %s", query)
@@ -82,8 +91,9 @@ func TestBuildQuery_WithStatusFilter(t *testing.T) {
 func TestBuildQuery_WithDateRange(t *testing.T) {
 	p := QueryParams{Page: 1, PerPage: 50, Sort: "id", Order: "asc", DateFrom: "2023-01-01", DateTo: "2023-12-31"}
 	query, args := BuildQuery(p)
-	if len(args) != 2 {
-		t.Errorf("expected 2 args, got %d", len(args))
+	// date_from + date_to + limit + offset で 4 つ
+	if len(args) != 4 {
+		t.Errorf("expected 4 args, got %d", len(args))
 	}
 	if !strings.Contains(query, "order_date >= ?") {
 		t.Errorf("expected order_date >= ?, got %s", query)
@@ -109,29 +119,35 @@ func TestBuildQuery_AllFilters(t *testing.T) {
 		DateFrom: "2023-01-01", DateTo: "2023-12-31",
 	}
 	query, args := BuildQuery(p)
-	if len(args) != 6 {
-		t.Errorf("expected 6 args, got %d", len(args))
+	// filters 6 + limit + offset で 8
+	if len(args) != 8 {
+		t.Errorf("expected 8 args, got %d", len(args))
 	}
 	if !strings.Contains(query, "ORDER BY order_date DESC") {
 		t.Errorf("expected ORDER BY order_date DESC, got %s", query)
 	}
-	if !strings.Contains(query, "LIMIT 20 OFFSET 20") {
-		t.Errorf("expected LIMIT 20 OFFSET 20, got %s", query)
+	if !strings.Contains(query, "LIMIT ? OFFSET ?") {
+		t.Errorf("expected LIMIT ? OFFSET ?, got %s", query)
 	}
 	if !strings.Contains(query, "customer_name LIKE ?") {
 		t.Error("expected customer_name LIKE ?")
 	}
-	// Check LIKE args have wildcards
+	// Check LIKE args have wildcards (filters[0..5] が WHERE 用の args)
 	if args[2] != "%田中%" {
 		t.Errorf("expected %%田中%%, got %v", args[2])
+	}
+	// 末尾2要素が limit と offset
+	if args[6] != 20 || args[7] != 20 {
+		t.Errorf("expected limit=20 offset=20 at tail, got %v %v", args[6], args[7])
 	}
 }
 
 func TestBuildQuery_LikeWildcardEscaped(t *testing.T) {
 	p := QueryParams{Page: 1, PerPage: 50, Sort: "id", Order: "asc", CustomerName: "100%株式会社"}
 	_, args := BuildQuery(p)
-	if len(args) != 1 {
-		t.Fatalf("expected 1 arg, got %d", len(args))
+	// LIKE filter + limit + offset で 3
+	if len(args) != 3 {
+		t.Fatalf("expected 3 args, got %d", len(args))
 	}
 	got := args[0].(string)
 	expected := `%100\%株式会社%`
@@ -143,9 +159,9 @@ func TestBuildQuery_LikeWildcardEscaped(t *testing.T) {
 func TestBuildQuery_InvalidDateIgnored(t *testing.T) {
 	p := QueryParams{Page: 1, PerPage: 50, Sort: "id", Order: "asc", DateFrom: "not-a-date", DateTo: "2024-01-01"}
 	query, args := BuildQuery(p)
-	// 不正なDateFromは無視され、DateToだけが条件に含まれる
-	if len(args) != 1 {
-		t.Fatalf("expected 1 arg (only valid date_to), got %d", len(args))
+	// 不正なDateFromは無視され、DateToだけが条件に含まれる + limit + offset = 3
+	if len(args) != 3 {
+		t.Fatalf("expected 3 args (date_to, limit, offset), got %d", len(args))
 	}
 	if !strings.Contains(query, "order_date <= ?") {
 		t.Errorf("expected order_date <= ?, got %s", query)
@@ -158,15 +174,22 @@ func TestBuildQuery_InvalidDateIgnored(t *testing.T) {
 func TestBuildQuery_DeferredJoinForLargeOffset(t *testing.T) {
 	// OFFSETが閾値以上の場合、deferred joinに切り替わることを確認
 	p := QueryParams{Page: 501, PerPage: 50, Sort: "order_date", Order: "desc"}
-	query, _ := BuildQuery(p)
+	query, args := BuildQuery(p)
 	if !strings.Contains(query, "INNER JOIN") {
 		t.Errorf("expected deferred join with INNER JOIN for large offset, got %s", query)
 	}
 	if !strings.Contains(query, "SELECT id FROM orders") {
 		t.Errorf("expected subquery to select only id, got %s", query)
 	}
-	if !strings.Contains(query, "LIMIT 50 OFFSET 25000") {
-		t.Errorf("expected LIMIT 50 OFFSET 25000, got %s", query)
+	if !strings.Contains(query, "LIMIT ? OFFSET ?") {
+		t.Errorf("expected LIMIT ? OFFSET ?, got %s", query)
+	}
+	// limit と offset が bind されている
+	if len(args) != 2 {
+		t.Errorf("expected 2 args (limit, offset), got %d", len(args))
+	}
+	if args[0] != 50 || args[1] != 25000 {
+		t.Errorf("expected [50, 25000], got %v", args)
 	}
 }
 
@@ -185,7 +208,7 @@ func TestBuildCountQuery_NoFilters(t *testing.T) {
 	if len(args) != 0 {
 		t.Errorf("expected 0 args, got %d", len(args))
 	}
-	if query != "SELECT COUNT(*) FROM orders " {
+	if query != "SELECT COUNT(*) FROM orders" {
 		t.Errorf("unexpected query: %s", query)
 	}
 }

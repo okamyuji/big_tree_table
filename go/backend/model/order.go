@@ -104,6 +104,41 @@ type OrderTreeResponse struct {
 	TotalPages int             `json:"total_pages"`
 }
 
+// orderColumns はSELECTとScanで使うカラム順序の単一情報源。
+// SELECT列の並びと(*Order).ScanTargets()の並びを必ずここから生成し、
+// 物理スキーマの並びとは独立に管理する。物理スキーマの並びに依存しないことで
+// migrationでカラムが追加されてもScan順がずれない。
+var orderColumns = []string{
+	"id", "order_number", "order_type", "order_date",
+	"customer_name", "customer_code", "product_name", "product_code",
+	"quantity", "unit_price", "total_amount", "status",
+	"delivery_date", "notes", "created_at", "updated_at",
+}
+
+// orderColumnsSQL は orderColumns をカンマ区切りで結合した SELECT 用文字列。
+var orderColumnsSQL = strings.Join(orderColumns, ", ")
+
+// orderColumnsSQLAliased は orderColumns に "o." プレフィックスを付けたバージョン。
+// deferred join 時の外側 SELECT に使う。
+var orderColumnsSQLAliased = func() string {
+	prefixed := make([]string, len(orderColumns))
+	for i, c := range orderColumns {
+		prefixed[i] = "o." + c
+	}
+	return strings.Join(prefixed, ", ")
+}()
+
+// ScanTargets returns the slice of pointers in the same order as orderColumns
+// so that rows.Scan can be invoked without re-specifying columns at each call site.
+func (o *Order) ScanTargets() []any {
+	return []any{
+		&o.ID, &o.OrderNumber, &o.OrderType, &o.OrderDate,
+		&o.CustomerName, &o.CustomerCode, &o.ProductName, &o.ProductCode,
+		&o.Quantity, &o.UnitPrice, &o.TotalAmount, &o.Status,
+		&o.DeliveryDate, &o.Notes, &o.CreatedAt, &o.UpdatedAt,
+	}
+}
+
 // sanitizeSortColumn maps a user-supplied sort key to a literal column name.
 // 各caseでリテラル文字列を返すことで、ユーザー入力からSQL文へのテイント
 // 伝播を遮断し、CodeQLのSQLインジェクション検出に対しても安全とする。
@@ -151,33 +186,63 @@ func sanitizeSortOrder(s string) string {
 
 const offsetThreshold = 10000
 
+// BuildQuery composes the SELECT clause statically and binds every user-derived
+// value through `?` placeholders, including LIMIT / OFFSET. sortCol / sortOrder
+// are also user input by name, but they go through whitelists that map to
+// compile-time literal strings (`sanitizeSortColumn` / `sanitizeSortOrder`)
+// before reaching this assembly step.
 func BuildQuery(p QueryParams) (string, []any) {
 	where, args := buildWhere(p)
 	sortCol := sanitizeSortColumn(p.Sort)
 	sortOrder := sanitizeSortOrder(p.Order)
 	offset := (p.Page - 1) * p.PerPage
 
+	var b strings.Builder
 	// OFFSETが大きい場合はdeferred joinで最適化する。
 	// 内側のサブクエリがインデックスのみをスキャンしてIDを特定し、
 	// 外側のJOINで該当行のフルデータを取得する。
 	if offset >= offsetThreshold {
-		query := fmt.Sprintf(
-			"SELECT o.id, o.order_number, o.order_type, o.order_date, o.customer_name, o.customer_code, o.product_name, o.product_code, o.quantity, o.unit_price, o.total_amount, o.status, o.delivery_date, o.notes, o.created_at, o.updated_at FROM orders o INNER JOIN (SELECT id FROM orders %s ORDER BY %s %s LIMIT %d OFFSET %d) sub ON o.id = sub.id ORDER BY o.%s %s",
-			where, sortCol, sortOrder, p.PerPage, offset, sortCol, sortOrder,
-		)
-		return query, args
+		b.WriteString("SELECT ")
+		b.WriteString(orderColumnsSQLAliased)
+		b.WriteString(" FROM orders o INNER JOIN (SELECT id FROM orders")
+		if where != "" {
+			b.WriteByte(' ')
+			b.WriteString(where)
+		}
+		b.WriteString(" ORDER BY ")
+		b.WriteString(sortCol)
+		b.WriteByte(' ')
+		b.WriteString(sortOrder)
+		b.WriteString(" LIMIT ? OFFSET ?) sub ON o.id = sub.id ORDER BY o.")
+		b.WriteString(sortCol)
+		b.WriteByte(' ')
+		b.WriteString(sortOrder)
+		args = append(args, p.PerPage, offset)
+		return b.String(), args
 	}
 
-	query := fmt.Sprintf(
-		"SELECT id, order_number, order_type, order_date, customer_name, customer_code, product_name, product_code, quantity, unit_price, total_amount, status, delivery_date, notes, created_at, updated_at FROM orders %s ORDER BY %s %s LIMIT %d OFFSET %d",
-		where, sortCol, sortOrder, p.PerPage, offset,
-	)
-	return query, args
+	b.WriteString("SELECT ")
+	b.WriteString(orderColumnsSQL)
+	b.WriteString(" FROM orders")
+	if where != "" {
+		b.WriteByte(' ')
+		b.WriteString(where)
+	}
+	b.WriteString(" ORDER BY ")
+	b.WriteString(sortCol)
+	b.WriteByte(' ')
+	b.WriteString(sortOrder)
+	b.WriteString(" LIMIT ? OFFSET ?")
+	args = append(args, p.PerPage, offset)
+	return b.String(), args
 }
 
 func BuildCountQuery(p QueryParams) (string, []any) {
 	where, args := buildWhere(p)
-	return fmt.Sprintf("SELECT COUNT(*) FROM orders %s", where), args
+	if where == "" {
+		return "SELECT COUNT(*) FROM orders", args
+	}
+	return "SELECT COUNT(*) FROM orders " + where, args
 }
 
 func BuildOrderTree(orders []Order) []OrderTreeNode {

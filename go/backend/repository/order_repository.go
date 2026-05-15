@@ -33,12 +33,7 @@ func (r *MySQLOrderRepository) FindOrders(params model.QueryParams) ([]model.Ord
 	orders := make([]model.Order, 0)
 	for rows.Next() {
 		var o model.Order
-		if err := rows.Scan(
-			&o.ID, &o.OrderNumber, &o.OrderType, &o.OrderDate,
-			&o.CustomerName, &o.CustomerCode, &o.ProductName, &o.ProductCode,
-			&o.Quantity, &o.UnitPrice, &o.TotalAmount, &o.Status,
-			&o.DeliveryDate, &o.Notes, &o.CreatedAt, &o.UpdatedAt,
-		); err != nil {
+		if err := rows.Scan(o.ScanTargets()...); err != nil {
 			return nil, err
 		}
 		orders = append(orders, o)
