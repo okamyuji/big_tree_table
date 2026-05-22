@@ -16,9 +16,10 @@ repos:
     rev: v6.0.0
     hooks:
       - id: trailing-whitespace
+        # Rails encrypted credentials are binary-shaped; never byte-mutate.
+        exclude: ^config/credentials(/[^/]+)?\.yml\.enc$
       - id: end-of-file-fixer
-        # Rails encrypted credentials must not be byte-mutated by the fixer.
-        exclude: ^config/credentials\.yml\.enc$
+        exclude: ^config/credentials(/[^/]+)?\.yml\.enc$
       - id: check-merge-conflict
       - id: check-added-large-files
         args: ["--maxkb=1024"]
@@ -29,6 +30,12 @@ repos:
   # it only runs when the relevant frontend files actually changed.
   - repo: local
     hooks:
+      # NOTE on `bash -c 'cd frontend && ...'`: with corepack, pnpm's
+      # `packageManager` pin (pnpm@10.32.1) is resolved from the cwd's
+      # nearest package.json. `pnpm -C frontend ...` runs from the repo
+      # root, where corepack doesn't see the pin and falls back to the
+      # globally installed pnpm, breaking on version mismatch. Changing
+      # cwd via the shell keeps corepack honest.
       - id: frontend-pnpm-install
         name: frontend · pnpm install --frozen-lockfile
         language: system
