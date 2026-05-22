@@ -6,7 +6,7 @@
 # CI mirrors these hooks in .github/workflows/ci.yml.
 repos:
   - repo: https://github.com/gitleaks/gitleaks
-    rev: v8.30.4
+    rev: v8.30.1
     hooks:
       - id: gitleaks
         # Scan staged content (the default) plus the working tree as a safety net.
@@ -17,6 +17,42 @@ repos:
     hooks:
       - id: trailing-whitespace
       - id: end-of-file-fixer
+        # Rails encrypted credentials must not be byte-mutated by the fixer.
+        exclude: ^config/credentials\.yml\.enc$
       - id: check-merge-conflict
       - id: check-added-large-files
         args: ["--maxkb=1024"]
+
+  # Mirror the GitHub Actions `frontend` job locally so problems like
+  # ERR_PNPM_LOCKFILE_CONFIG_MISMATCH (package.json ↔ pnpm-lock.yaml drift)
+  # fail at commit time instead of on push. Each hook is gated by `files:` so
+  # it only runs when the relevant frontend files actually changed.
+  - repo: local
+    hooks:
+      - id: frontend-pnpm-install
+        name: frontend · pnpm install --frozen-lockfile
+        language: system
+        entry: bash -c 'cd frontend && pnpm install --frozen-lockfile'
+        files: ^frontend/(package\.json|pnpm-lock\.yaml)$
+        pass_filenames: false
+
+      - id: frontend-typecheck
+        name: frontend · tsc -b
+        language: system
+        entry: bash -c 'cd frontend && pnpm exec tsc -b'
+        files: ^frontend/.*\.(ts|tsx|json)$
+        pass_filenames: false
+
+      - id: frontend-lint
+        name: frontend · eslint .
+        language: system
+        entry: bash -c 'cd frontend && pnpm exec eslint .'
+        files: ^frontend/.*\.(ts|tsx|js|jsx|cjs|mjs)$
+        pass_filenames: false
+
+      - id: frontend-test
+        name: frontend · vitest (pnpm test)
+        language: system
+        entry: bash -c 'cd frontend && pnpm test'
+        files: ^frontend/.*\.(ts|tsx|js|jsx)$
+        pass_filenames: false
