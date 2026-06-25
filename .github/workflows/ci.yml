@@ -18,7 +18,7 @@ jobs:
     name: gitleaks (secret scan)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           # Full history so gitleaks can scan every commit on PRs.
           fetch-depth: 0
@@ -60,7 +60,7 @@ jobs:
       - name: Install MySQL client
         run: sudo apt-get update && sudo apt-get install --no-install-recommends -y default-libmysqlclient-dev default-mysql-client
 
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - name: Set up Ruby
         uses: ruby/setup-ruby@v1
@@ -95,7 +95,7 @@ jobs:
       run:
         working-directory: frontend
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
         with:
           version: 10
