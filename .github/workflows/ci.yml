@@ -15,21 +15,17 @@ concurrency:
 
 jobs:
   gitleaks:
-    name: gitleaks (secret scan)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          # Full history so gitleaks can scan every commit on PRs.
-          fetch-depth: 0
-      - name: gitleaks
-        uses: gitleaks/gitleaks-action@v3
-        env:
-          # Required since gitleaks-action v2 for pull_request scans —
-          # the action calls the GitHub API to enumerate PR commits.
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITLEAKS_CONFIG: .gitleaks.toml
+    # gitleaks auto-detects .gitleaks.toml at the repo root; the reusable
+    # workflow provides GITHUB_TOKEN (required for pull_request scans).
+    uses: okamyuji/reusable-workflows/.github/workflows/security-scan.yml@v1
 
+  # Kept as a repo-specific job (not replaced by rails-ci.yml@v1):
+  # the reusable test-mysql job runs MySQL with MYSQL_ALLOW_EMPTY_PASSWORD
+  # and sets only DB_HOST, while this repo's config/database.yml defaults
+  # DB_PASSWORD to "password". workflow_call also gives no way to inject
+  # RAILS_ENV/DB_* env, Node 24 (needed by bin/quality's build step), or the
+  # MySQL client libraries — and bin/quality already bundles rubocop/brakeman/
+  # audit, which rails-ci.yml would run a second time in separate jobs.
   quality:
     name: rubocop · sorbet · brakeman · audit · tests · build
     runs-on: ubuntu-latest
@@ -90,21 +86,10 @@ jobs:
 
   frontend:
     name: frontend (typecheck · lint · vitest)
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: frontend
-    steps:
-      - uses: actions/checkout@v7
-      - uses: pnpm/action-setup@v6
-        with:
-          version: 10
-      - uses: actions/setup-node@v6
-        with:
-          node-version: 24
-          cache: pnpm
-          cache-dependency-path: frontend/pnpm-lock.yaml
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm exec tsc -b
-      - run: pnpm exec eslint .
-      - run: pnpm test
+    uses: okamyuji/reusable-workflows/.github/workflows/node-ci.yml@v1
+    with:
+      node-version: "24"
+      working-directory: frontend
+      lint-command: run lint
+      typecheck-command: run typecheck
+      test-command: run test
