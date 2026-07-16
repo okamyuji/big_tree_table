@@ -7,18 +7,18 @@ ENV["RAILS_ENV"] ||= "test"
 require "simplecov"
 SimpleCov.start "rails" do
   enable_coverage :branch
-  add_filter "/test/"
-  add_filter "/config/"
-  add_filter "/db/"
-  add_filter "/bin/"
-  add_filter "/vendor/"
+  skip "/test/"
+  skip "/config/"
+  skip "/db/"
+  skip "/bin/"
+  skip "/vendor/"
   # The boot wiring (application/boot/environment) is plumbing — exclude it
   # from the coverage floor so it doesn't dilute the score we actually care
   # about (app/ logic).
-  add_filter "/config/application.rb"
-  add_filter "/config/environment.rb"
-  add_filter "/config/boot.rb"
-  add_filter "/config/puma.rb"
+  skip "/config/application.rb"
+  skip "/config/environment.rb"
+  skip "/config/boot.rb"
+  skip "/config/puma.rb"
 
   minimum_coverage 80
 end
