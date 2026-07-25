@@ -1,6 +1,7 @@
 package model
 
 import (
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -265,5 +266,84 @@ func TestBuildOrderTree(t *testing.T) {
 	}
 	if customer.Children[0].Children[0].Order.OrderNumber != "ORD-001" {
 		t.Errorf("unexpected order number: %s", customer.Children[0].Children[0].Order.OrderNumber)
+	}
+}
+
+// ページ境界の安定性を担保するため、ソート列がidでないときは同方向のidを
+// 第2キーに入れる。入れないと同値行の並びがLIMIT/OFFSET間で不定になり、
+// ページ移動時に行の重複や欠落が起きる。
+func TestBuildQuery_AddsIDTiebreakerWhenSortingByNonIDColumn(t *testing.T) {
+	p := QueryParams{Page: 1, PerPage: 50, Sort: "order_date", Order: "desc"}
+	query, _ := BuildQuery(p)
+	if !strings.Contains(query, "ORDER BY order_date DESC, id DESC") {
+		t.Errorf("expected ORDER BY order_date DESC, id DESC, got %s", query)
+	}
+}
+
+func TestBuildQuery_OmitsTiebreakerWhenSortingByID(t *testing.T) {
+	p := QueryParams{Page: 1, PerPage: 50, Sort: "id", Order: "asc"}
+	query, _ := BuildQuery(p)
+	if strings.Contains(query, "id ASC, id ASC") {
+		t.Errorf("did not expect duplicated id key, got %s", query)
+	}
+	if !strings.Contains(query, "ORDER BY id ASC LIMIT") {
+		t.Errorf("expected ORDER BY id ASC LIMIT, got %s", query)
+	}
+}
+
+func TestBuildQuery_DeferredJoinAddsTiebreakerToBothClauses(t *testing.T) {
+	// offset >= offsetThreshold で deferred join 経路に入る
+	p := QueryParams{Page: 501, PerPage: 20, Sort: "status", Order: "asc"}
+	query, _ := BuildQuery(p)
+	if !strings.Contains(query, "ORDER BY status ASC, id ASC LIMIT ? OFFSET ?") {
+		t.Errorf("expected tiebreaker in inner subquery, got %s", query)
+	}
+	if !strings.Contains(query, "ORDER BY o.status ASC, o.id ASC") {
+		t.Errorf("expected tiebreaker in outer clause, got %s", query)
+	}
+}
+
+func TestBuildQuery_DeferredJoinOmitsTiebreakerWhenSortingByID(t *testing.T) {
+	p := QueryParams{Page: 501, PerPage: 20, Sort: "id", Order: "desc"}
+	query, _ := BuildQuery(p)
+	if strings.Contains(query, "id DESC, id DESC") {
+		t.Errorf("did not expect duplicated id key, got %s", query)
+	}
+	if strings.Contains(query, "o.id DESC, o.id DESC") {
+		t.Errorf("did not expect duplicated aliased id key, got %s", query)
+	}
+}
+
+// orderColumns と ScanTargets は同じ定義から導出されるので、i番目の列名に
+// 対応する構造体フィールドのアドレスが i番目のScan先と一致する。
+// 片方だけを編集できてしまうと rows.Scan が別フィールドへ書き込むため、
+// このテストがその乖離を検出する。
+func TestScanTargetsMatchOrderColumnsByJSONTag(t *testing.T) {
+	o := &Order{}
+	targets := o.ScanTargets()
+	if len(targets) != len(orderColumns) {
+		t.Fatalf("len mismatch: orderColumns=%d ScanTargets=%d", len(orderColumns), len(targets))
+	}
+
+	v := reflect.ValueOf(o).Elem()
+	typ := v.Type()
+	byTag := make(map[string]any, typ.NumField())
+	for i := 0; i < typ.NumField(); i++ {
+		tag := strings.Split(typ.Field(i).Tag.Get("json"), ",")[0]
+		if tag == "" || tag == "-" {
+			continue
+		}
+		byTag[tag] = v.Field(i).Addr().Interface()
+	}
+
+	for i, col := range orderColumns {
+		want, ok := byTag[col]
+		if !ok {
+			t.Errorf("column %q has no struct field with a matching json tag", col)
+			continue
+		}
+		if targets[i] != want {
+			t.Errorf("column %q (index %d): ScanTargets points at a different field", col, i)
+		}
 	}
 }

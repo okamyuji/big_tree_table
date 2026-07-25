@@ -104,16 +104,47 @@ type OrderTreeResponse struct {
 	TotalPages int             `json:"total_pages"`
 }
 
-// orderColumns はSELECTとScanで使うカラム順序の単一情報源。
-// SELECT列の並びと(*Order).ScanTargets()の並びを必ずここから生成し、
-// 物理スキーマの並びとは独立に管理する。物理スキーマの並びに依存しないことで
-// migrationでカラムが追加されてもScan順がずれない。
-var orderColumns = []string{
-	"id", "order_number", "order_type", "order_date",
-	"customer_name", "customer_code", "product_name", "product_code",
-	"quantity", "unit_price", "total_amount", "status",
-	"delivery_date", "notes", "created_at", "updated_at",
+// orderField は1カラムぶんの列名とScan先を対で保持する。
+type orderField struct {
+	column string
+	target any
 }
+
+// orderFields はSELECT句とScan順序の単一情報源。列を足すときはここに1要素を
+// 足すだけでよく、列名とScan先が必ず同じ要素に載るため、片方だけがずれることは
+// 構造上起こらない。物理スキーマの並びには依存させないので、migrationで
+// カラムが追加されてもScan順は変わらない。
+func (o *Order) orderFields() []orderField {
+	return []orderField{
+		{"id", &o.ID},
+		{"order_number", &o.OrderNumber},
+		{"order_type", &o.OrderType},
+		{"order_date", &o.OrderDate},
+		{"customer_name", &o.CustomerName},
+		{"customer_code", &o.CustomerCode},
+		{"product_name", &o.ProductName},
+		{"product_code", &o.ProductCode},
+		{"quantity", &o.Quantity},
+		{"unit_price", &o.UnitPrice},
+		{"total_amount", &o.TotalAmount},
+		{"status", &o.Status},
+		{"delivery_date", &o.DeliveryDate},
+		{"notes", &o.Notes},
+		{"created_at", &o.CreatedAt},
+		{"updated_at", &o.UpdatedAt},
+	}
+}
+
+// orderColumns は orderFields から列名だけを取り出したもの。
+// ゼロ値のOrderから導出するのは列名の抽出にポインタの中身を使わないため。
+var orderColumns = func() []string {
+	fields := (&Order{}).orderFields()
+	columns := make([]string, len(fields))
+	for i, f := range fields {
+		columns[i] = f.column
+	}
+	return columns
+}()
 
 // orderColumnsSQL は orderColumns をカンマ区切りで結合した SELECT 用文字列。
 var orderColumnsSQL = strings.Join(orderColumns, ", ")
@@ -131,12 +162,12 @@ var orderColumnsSQLAliased = func() string {
 // ScanTargets returns the slice of pointers in the same order as orderColumns
 // so that rows.Scan can be invoked without re-specifying columns at each call site.
 func (o *Order) ScanTargets() []any {
-	return []any{
-		&o.ID, &o.OrderNumber, &o.OrderType, &o.OrderDate,
-		&o.CustomerName, &o.CustomerCode, &o.ProductName, &o.ProductCode,
-		&o.Quantity, &o.UnitPrice, &o.TotalAmount, &o.Status,
-		&o.DeliveryDate, &o.Notes, &o.CreatedAt, &o.UpdatedAt,
+	fields := o.orderFields()
+	targets := make([]any, len(fields))
+	for i, f := range fields {
+		targets[i] = f.target
 	}
+	return targets
 }
 
 // sanitizeSortColumn maps a user-supplied sort key to a literal column name.
@@ -186,6 +217,27 @@ func sanitizeSortOrder(s string) string {
 
 const offsetThreshold = 10000
 
+// writeOrderBy はORDER BY句を組み立てる。sortColがid以外のときは同方向のidを
+// 第2キーとして加える。ソート値が同じ行の並びはMySQLが保証しないため、
+// タイブレーカーがないとLIMIT/OFFSETのページ境界で行の重複や欠落が起きる。
+// prefixはdeferred joinの外側SELECT用の "o." のようなテーブル別名を受け取る。
+// sortCol / sortOrder は sanitizeSortColumn / sanitizeSortOrder を通った
+// リテラル文字列のみが渡る前提で、ここでは再検証しない。
+func writeOrderBy(b *strings.Builder, prefix, sortCol, sortOrder string) {
+	b.WriteString(" ORDER BY ")
+	b.WriteString(prefix)
+	b.WriteString(sortCol)
+	b.WriteByte(' ')
+	b.WriteString(sortOrder)
+	if sortCol == "id" {
+		return
+	}
+	b.WriteString(", ")
+	b.WriteString(prefix)
+	b.WriteString("id ")
+	b.WriteString(sortOrder)
+}
+
 // BuildQuery composes the SELECT clause statically and binds every user-derived
 // value through `?` placeholders, including LIMIT / OFFSET. sortCol / sortOrder
 // are also user input by name, but they go through whitelists that map to
@@ -209,14 +261,9 @@ func BuildQuery(p QueryParams) (string, []any) {
 			b.WriteByte(' ')
 			b.WriteString(where)
 		}
-		b.WriteString(" ORDER BY ")
-		b.WriteString(sortCol)
-		b.WriteByte(' ')
-		b.WriteString(sortOrder)
-		b.WriteString(" LIMIT ? OFFSET ?) sub ON o.id = sub.id ORDER BY o.")
-		b.WriteString(sortCol)
-		b.WriteByte(' ')
-		b.WriteString(sortOrder)
+		writeOrderBy(&b, "", sortCol, sortOrder)
+		b.WriteString(" LIMIT ? OFFSET ?) sub ON o.id = sub.id")
+		writeOrderBy(&b, "o.", sortCol, sortOrder)
 		args = append(args, p.PerPage, offset)
 		return b.String(), args
 	}
@@ -228,10 +275,7 @@ func BuildQuery(p QueryParams) (string, []any) {
 		b.WriteByte(' ')
 		b.WriteString(where)
 	}
-	b.WriteString(" ORDER BY ")
-	b.WriteString(sortCol)
-	b.WriteByte(' ')
-	b.WriteString(sortOrder)
+	writeOrderBy(&b, "", sortCol, sortOrder)
 	b.WriteString(" LIMIT ? OFFSET ?")
 	args = append(args, p.PerPage, offset)
 	return b.String(), args
