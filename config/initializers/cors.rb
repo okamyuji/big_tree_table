@@ -18,5 +18,15 @@ Rails.application.config.middleware.insert_before 0, Rack::Cors do
 end
 
 # Permit Rails to receive Vite-proxied requests on dev hosts beyond the
-# initialiser default of "localhost:3000".
-Rails.application.config.hosts << "backend" if Rails.application.config.respond_to?(:hosts)
+# initialiser default of "localhost:3000". The Vite dev server reaches the API
+# as http://backend:3000 inside the compose network, so "backend" arrives as the
+# Host header.
+#
+# development only. Rails seeds config.hosts with localhost and friends in
+# development, so adding one entry there just widens an existing allow list.
+# In production config.hosts starts empty, and adding a single entry turns
+# HostAuthorization on with "backend" as the only permitted Host — every other
+# Host, including the real deployment domain, then gets a 403.
+if Rails.env.development? && Rails.application.config.respond_to?(:hosts)
+  Rails.application.config.hosts << "backend"
+end
