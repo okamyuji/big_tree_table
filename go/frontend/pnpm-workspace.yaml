@@ -1,0 +1,5 @@
+# セキュリティパッチ適用のための minimumReleaseAge (7日) の例外。
+# nanoid 3.3.17 は 2026-08-03 公開の GHSA 修正版で、公開7日未満のため既定では取得できない。
+# 上流の postcss が修正版を取り込んだら削除してよい。
+minimumReleaseAgeExclude:
+  - nanoid
