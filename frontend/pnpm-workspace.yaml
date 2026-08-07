@@ -1,6 +1,56 @@
-# セキュリティパッチ適用のための minimumReleaseAge (7日) の例外。
-# nanoid 3.3.17 は 2026-08-03 公開の GHSA 修正版で、公開から7日未満のため
-# 既定ポリシーでは取得できない。脆弱性解消を優先して当該パッケージのみ除外する。
+# pnpm の設定はすべてここに置く。pnpm 11 から package.json の "pnpm" フィールドは
+# 読まれなくなり、.npmrc も認証・レジストリ設定専用になったため。
+# https://pnpm.io/settings
+
+# --- 依存の上書き ---
+# vite / vitest は Vite+ (@voidzero-dev) のディストリビューションへ差し替える。
+# それ以外は脆弱性のあるバージョンを踏まないための下限固定。
+# 範囲指定 (">=5.0.9" など) だと解決版が揺れて脆弱版が残るため、必ず具体バージョンで書く。
+overrides:
+  vite: "npm:@voidzero-dev/vite-plus-core@0.1.24"
+  vitest: "npm:@voidzero-dev/vite-plus-test@0.1.24"
+  "brace-expansion@<1.1.18": "1.1.18"
+  "brace-expansion@>=3.0.0 <5.0.9": "5.0.9"
+  "undici@>=7.0.0 <7.29.0": "^7.29.0"
+  "js-yaml@>=4.0.0 <4.3.1": "4.3.1"
+  "@babel/core@<7.29.6": "^7.29.6"
+  "ws@>=8.0.0 <8.21.0": "^8.21.0"
+  "postcss@<8.5.23": "8.5.23"
+  "nanoid@<3.3.17": "^3.3.17"
+
+# vite を Vite+ に差し替えている都合で、vite の peer を要求するパッケージからは
+# バージョンが 0.1.24 に見える。strictPeerDependencies を有効にしたままにするため、
+# このバージョンを明示的に許可する。
+peerDependencyRules:
+  allowedVersions:
+    vite: "0.1.24"
+
+# --- サプライチェーン対策 ---
+# 公開から7日未満のパッケージを取得しない。chalk/debug (2024)、lottie-player (2024)、
+# eslint-config-* (2024) のようなサプライチェーン攻撃は公開1〜7日以内に検知・削除
+# されることが多く、1週間待つだけで大半を回避できる。
+# 緊急のホットフィックスが必要なときは --minimum-release-age 0 で個別に上書きするが、
+# それは意図的にレビューされた例外として扱う。
+minimumReleaseAge: 10080 # 60 * 24 * 7 = 7日（分）
+
+# 上記ポリシーの例外。nanoid 3.3.17 は 2026-08-03 公開の GHSA 修正版で、公開から
+# 7日未満のため既定では取得できない。脆弱性解消を優先して当該パッケージのみ除外する。
 # 上流の postcss が修正版を取り込んだら、この設定は削除してよい。
 minimumReleaseAgeExclude:
   - nanoid
+
+# package.json の依存はすべて完全一致で固定しているので、^ や ~ が再混入する
+# 保存を抑止する。
+saveExact: true
+savePrefix: ""
+
+# peer 依存の不一致は警告ではなくビルド失敗にして、非互換な依存ツリーへ静かに
+# 流されないようにする。
+strictPeerDependencies: true
+
+# install 時に監査を走らせ、到達可能なアドバイザリを即座に表面化させる。
+audit:
+  level: moderate
+
+# 整合性ハッシュが lockfile と一致しなければ install を失敗させる（既定だが明示）。
+verifyStoreIntegrity: true
