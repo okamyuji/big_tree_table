@@ -5,8 +5,19 @@ updates:
   schedule:
     interval: weekly
   open-pull-requests-limit: 10
+  # One grouped PR per week: concurrent bundler PRs conflict on adjacent
+  # Gemfile.lock CHECKSUMS lines, and hand-resolving that conflict is how
+  # stale CHECKSUMS reached main (PR #44/#52/#56).
+  groups:
+    bundler:
+      patterns:
+        - "*"
 - package-ecosystem: github-actions
   directory: "/"
   schedule:
     interval: weekly
   open-pull-requests-limit: 10
+  groups:
+    github-actions:
+      patterns:
+        - "*"
