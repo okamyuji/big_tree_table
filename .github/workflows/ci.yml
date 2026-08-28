@@ -20,16 +20,22 @@ jobs:
     uses: okamyuji/reusable-workflows/.github/workflows/security-scan.yml@v1
 
   # Gemfile.lock self-consistency guard (lockfile job only; lint/scan/tests
-  # stay in the repo-specific quality job below). Catches Dependabot bundler
-  # PRs that update the GEM section but leave CHECKSUMS stale, which otherwise
-  # breaks frozen `bundle install` (exit 16) after merging to main — happened
-  # with the sorbet-static-and-runtime 0.6.13373 bump (PR #44, 2026-07-31).
+  # stay in the repo-specific quality job below). Stale CHECKSUMS come from
+  # resolving a Dependabot PR's Gemfile.lock conflict in the web editor (main's
+  # old CHECKSUMS block survives while the GEM section moves on), which then
+  # breaks frozen `bundle install` (exit 16). git never recomputes CHECKSUMS,
+  # so on a Dependabot PR the job comments `@dependabot recreate` instead of
+  # asking for a manual fix; that needs pull-requests: write.
   lockfile:
+    permissions:
+      contents: read
+      pull-requests: write
     uses: okamyuji/reusable-workflows/.github/workflows/rails-ci.yml@v1
     with:
       run-lint: false
       security-scan: false
       run-tests: false
+      dependabot-recreate: true
 
   # Kept as a repo-specific job (not replaced by rails-ci.yml@v1):
   # the reusable test-mysql job runs MySQL with MYSQL_ALLOW_EMPTY_PASSWORD
