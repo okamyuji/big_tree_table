@@ -51,8 +51,11 @@ module Api
 
       # Count first and judge on the value increment returns: a separate read
       # would let concurrent guesses all pass the check before any is counted.
-      failures = cache_store.increment(auth_failure_key, 1, expires_in: AUTH_FAILURE_WINDOW).to_i
-      raise ActionController::TooManyRequests if failures > AUTH_FAILURE_LIMIT
+      # Solid Cache returns nil instead of raising on a transient DB error such as
+      # a deadlock on a new key. Retry once, then fail closed: an uncounted guess
+      # would be a free one.
+      failures = count_auth_attempt || count_auth_attempt
+      raise ActionController::TooManyRequests if failures.nil? || failures > AUTH_FAILURE_LIMIT
 
       if authenticate_with_http_basic { |given_user, given_password|
         ActiveSupport::SecurityUtils.secure_compare(given_user.to_s, user) &
@@ -63,6 +66,10 @@ module Api
       end
 
       request_http_basic_authentication(AUTH_REALM)
+    end
+
+    def count_auth_attempt
+      cache_store.increment(auth_failure_key, 1, expires_in: AUTH_FAILURE_WINDOW)
     end
 
     def auth_failure_key

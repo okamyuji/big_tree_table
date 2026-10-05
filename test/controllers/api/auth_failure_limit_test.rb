@@ -122,6 +122,51 @@ module Api
       Api::BaseController.config.cache_store = original
     end
 
+    # Solid Cache's failsafe turns a transient DB error (deadlock, lost
+    # connection) inside increment into a nil return instead of raising.
+    class FailingIncrementStore < SimpleDelegator
+      attr_reader :increments
+
+      def initialize(store, failures)
+        super(store)
+        @failures = failures
+        @increments = 0
+      end
+
+      def increment(key, *args, **opts)
+        @increments += 1
+        return nil if @increments <= @failures
+
+        __getobj__.increment(key, *args, **opts)
+      end
+    end
+
+    def with_store(store)
+      original = Api::BaseController.cache_store
+      Api::BaseController.config.cache_store = store
+      yield
+    ensure
+      Api::BaseController.config.cache_store = original
+    end
+
+    test "when the counter cannot be updated, the request is refused even with the right password" do
+      store = FailingIncrementStore.new(Api::BaseController.cache_store, 2)
+
+      with_store(store) { call_api(client(38), @secret) }
+
+      assert_response :too_many_requests
+      assert_equal 2, store.increments
+    end
+
+    test "one transient counter failure is retried, so the right password still gets through" do
+      store = FailingIncrementStore.new(Api::BaseController.cache_store, 1)
+
+      with_store(store) { call_api(client(39), @secret) }
+
+      assert_response :success
+      assert_equal 2, store.increments
+    end
+
     test "the failure count resets after the window" do
       fail_times(client(36), LIMIT)
 
