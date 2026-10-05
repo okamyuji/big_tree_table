@@ -20,7 +20,8 @@ module Api
 
     # Declared before the auth check so rejected (401) attempts are counted too;
     # otherwise the halted chain would let password guessing bypass the limit.
-    rate_limit to: RATE_LIMIT, within: RATE_LIMIT_WINDOW
+    # A fixed scope keeps one budget for the whole API; the default is per controller.
+    rate_limit to: RATE_LIMIT, within: RATE_LIMIT_WINDOW, scope: "api"
     before_action :require_api_basic_auth
 
     private

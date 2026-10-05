@@ -48,6 +48,31 @@ module Api
       assert_response :success
     end
 
+    test "behind a private-network proxy, clients are keyed by X-Forwarded-For, not by the proxy address" do
+      proxied = lambda do |client, secret|
+        credentials = ActionController::HttpAuthentication::Basic.encode_credentials(@user, secret)
+        get "/api/v1/orders",
+            headers: { "HTTP_AUTHORIZATION" => credentials, "HTTP_X_FORWARDED_FOR" => client },
+            env: { "REMOTE_ADDR" => "172.18.0.4" }
+      end
+
+      LIMIT.times { proxied.call("198.51.100.1", "wrong") }
+      proxied.call("198.51.100.1", @secret)
+
+      assert_response :too_many_requests
+
+      proxied.call("198.51.100.2", @secret)
+
+      assert_response :success
+    end
+
+    test "the counter key is one API-wide scope, not per controller" do
+      call_api("203.0.113.20", @secret)
+
+      assert Rails.cache.exist?("rate-limit:api:203.0.113.20")
+      assert_not Rails.cache.exist?("rate-limit:api/v1/orders:203.0.113.20")
+    end
+
     test "the count resets after the window" do
       exhaust_with_wrong_password("203.0.113.13")
 
