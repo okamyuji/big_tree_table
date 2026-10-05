@@ -12,37 +12,35 @@ module Api
     class OrdersController < Api::BaseController
       # GET /api/v1/orders
       def index
-        params_hash = list_params.to_h.symbolize_keys
-        scope = Order.search(params_hash)
-        total = Order.search_count(params_hash)
-        per   = per_page_for(params_hash)
-        page  = page_for(params_hash)
-
-        response.set_header("X-Total-Count", total.to_s)
+        scope, page_meta = paged_search
 
         render json: {
           orders: scope.map { |o| Order.order_payload(o) },
-          meta:   meta(total, page, per)
+          meta:   page_meta
         }
       end
 
       # GET /api/v1/orders/tree
       def tree
-        params_hash = list_params.to_h.symbolize_keys
-        scope = Order.search(params_hash)
-        total = Order.search_count(params_hash)
-        per   = per_page_for(params_hash)
-        page  = page_for(params_hash)
-
-        response.set_header("X-Total-Count", total.to_s)
+        scope, page_meta = paged_search
 
         render json: {
           tree: Order.build_tree(scope.to_a),
-          meta: meta(total, page, per)
+          meta: page_meta
         }
       end
 
       private
+
+      def paged_search
+        params_hash = list_params.to_h.symbolize_keys
+        scope = Order.search(params_hash)
+        total = Order.search_count(params_hash)
+
+        response.set_header("X-Total-Count", total.to_s)
+
+        [ scope, meta(total, page_for(params_hash), per_page_for(params_hash)) ]
+      end
 
       def list_params
         params.permit(
