@@ -1,6 +1,6 @@
 import { expect, test, type Page, type TestInfo } from "@playwright/test";
 
-const TREE_API_PATTERN = /\/api\/order-tree/;
+const TREE_API_PATTERN = /\/api\/v1\/orders\/tree/;
 const MAX_INITIAL_TREE_API_MS = 3_000;
 const MAX_INITIAL_RENDER_MS = 5_000;
 
