@@ -33,16 +33,21 @@ module Api
       "198.51.100.#{host}"
     end
 
-    def exhaust_with_wrong_password(ip)
-      LIMIT.times do
-        call_api(ip, @wrong)
+    # Ends on a 401 so a passing 429 afterwards proves rejected attempts count too.
+    # Only one failure, so the stricter AUTH_FAILURE_LIMIT is not what trips.
+    def exhaust_ending_with_a_failure(ip)
+      (LIMIT - 1).times do
+        call_api(ip, @secret)
 
-        assert_response :unauthorized
+        assert_response :success
       end
+      call_api(ip, @wrong)
+
+      assert_response :unauthorized
     end
 
     test "failed attempts count toward the limit, so the next request gets 429 even with the right password" do
-      exhaust_with_wrong_password(client(10))
+      exhaust_ending_with_a_failure(client(10))
 
       call_api(client(10), @secret)
 
@@ -50,7 +55,7 @@ module Api
     end
 
     test "the limit is per client IP" do
-      exhaust_with_wrong_password(client(11))
+      exhaust_ending_with_a_failure(client(11))
 
       call_api(client(12), @secret)
 
@@ -65,7 +70,7 @@ module Api
             env: { "REMOTE_ADDR" => "172.18.0.4" }
       end
 
-      LIMIT.times { proxied.call(forwarded_client(1), @wrong) }
+      LIMIT.times { proxied.call(forwarded_client(1), @secret) }
       proxied.call(forwarded_client(1), @secret)
 
       assert_response :too_many_requests
@@ -83,7 +88,7 @@ module Api
     end
 
     test "the count resets after the window" do
-      exhaust_with_wrong_password(client(13))
+      exhaust_ending_with_a_failure(client(13))
 
       travel WINDOW + 1.second do
         call_api(client(13), @secret)

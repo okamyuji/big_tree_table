@@ -20,6 +20,14 @@ module Api
     RATE_LIMIT        = 300
     RATE_LIMIT_WINDOW = 1.minute
 
+    # A stricter budget for wrong credentials only. rate_limit cannot express
+    # this: it increments on every request, and an `if:` that skips successes
+    # would let the right password through while wrong ones get 429, which
+    # tells a guesser when it has hit. So once the limit is reached, every
+    # request from that IP gets 429, right password included.
+    AUTH_FAILURE_LIMIT  = 10
+    AUTH_FAILURE_WINDOW = 15.minutes
+
     # Declared before the auth check so rejected (401) attempts are counted too;
     # otherwise the halted chain would let password guessing bypass the limit.
     # A fixed scope keeps one budget for the whole API; the default is per controller.
@@ -37,7 +45,22 @@ module Api
         return
       end
 
-      http_basic_authenticate_or_request_with(name: user, password: password, realm: AUTH_REALM)
+      raise ActionController::TooManyRequests if cache_store.read(auth_failure_key).to_i >= AUTH_FAILURE_LIMIT
+
+      return if authenticate_with_http_basic do |given_user, given_password|
+        ActiveSupport::SecurityUtils.secure_compare(given_user.to_s, user) &
+          ActiveSupport::SecurityUtils.secure_compare(given_password.to_s, password)
+      end
+
+      # The browser's first request carries no credentials; only count guesses.
+      if request.authorization.present?
+        cache_store.increment(auth_failure_key, 1, expires_in: AUTH_FAILURE_WINDOW)
+      end
+      request_http_basic_authentication(AUTH_REALM)
+    end
+
+    def auth_failure_key
+      "auth-failure:api:#{request.remote_ip}"
     end
   end
 end
