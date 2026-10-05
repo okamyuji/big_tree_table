@@ -45,6 +45,9 @@ module ActiveSupport
     # missing-counter-cache regression fails the test (config/initializers/bullet.rb
     # sets Bullet.raise = true in the test env).
     setup do
+      # Rails.cache backs the API rate limit; a fresh count per test keeps one
+      # test's requests from tripping another's limit.
+      Rails.cache.clear
       Bullet.start_request if defined?(Bullet) && Bullet.enable?
     end
 

@@ -15,6 +15,12 @@ module Api
   class BaseController < ActionController::API
     include ActionController::HttpAuthentication::Basic::ControllerMethods
 
+    RATE_LIMIT        = 300
+    RATE_LIMIT_WINDOW = 1.minute
+
+    # Declared before the auth check so rejected (401) attempts are counted too;
+    # otherwise the halted chain would let password guessing bypass the limit.
+    rate_limit to: RATE_LIMIT, within: RATE_LIMIT_WINDOW
     before_action :require_api_basic_auth
 
     private

@@ -76,7 +76,9 @@ bin/rails server -p 3000
 API_BASIC_AUTH_USER=viewer API_BASIC_AUTH_PASSWORD='<任意のパスワード>' bin/rails server -p 3000
 ```
 
-ブラウザは初回のAPI呼び出しで認証ダイアログを出し、以後は入力した資格情報を自動で送ります。Playwrightのe2eは、同じ環境変数があれば`httpCredentials`として送ります。
+パスワードの総当たりを防ぐため、`/api`は同じIPアドレスからの呼び出しを1分あたり300回までに制限し、超えた分には429を返します。認証に失敗した呼び出しも、この回数に数えます。
+
+初回のAPI呼び出しではブラウザが認証ダイアログを出すので、そこで資格情報を入力してください。以後はブラウザが自動で送ります。Playwrightのe2eは、同じ環境変数があれば`httpCredentials`として送ります。
 
 ### 5. フロントエンド (Vite) を起動
 
