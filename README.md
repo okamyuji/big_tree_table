@@ -96,18 +96,21 @@ pnpm dev --port 5173 --host 127.0.0.1
 docker compose up -d
 ```
 
-Docker Composeで起動した場合、フロントエンドはNginx経由で<http://localhost:3000>から配信されます。
+Docker Composeで起動した場合も、フロントエンドはViteの開発サーバとして<http://localhost:5173>から配信されます。composeは3つのポートをすべて`127.0.0.1`に限定して公開します。Linuxでは、ループバックに公開したポートへ同じネットワークの他ホストから届く不具合を修正したDocker Engine 28.0以上を使ってください。
 
 APIのBasic認証を有効にするには、ホストのシェルで`API_BASIC_AUTH_USER`と`API_BASIC_AUTH_PASSWORD`を設定してから`docker compose up -d`を実行してください。composeはこの2つをbackendに渡します。
+
+本番用のイメージは、`Dockerfile`（Thrusterが80番で受けてRailsへ渡す）と`frontend/Dockerfile`（Nginxが80番で配信し、`/api/`を`backend:80`へ転送する）です。
 
 ## ポート
 
 | サービス | ポート | 用途 |
 | --- | --- | --- |
 | MySQL | 3306 | ローカル開発用DB（既定） |
-| Backend (Rails) | 3000 | APIサーバ |
-| Frontend Docker | 3000 (compose) | Nginx配信 |
-| Frontend local | 5173 | Vite開発サーバ |
+| Backend (Rails) | 3000 | 開発用APIサーバ |
+| Frontend (Vite) | 5173 | 開発サーバ（ローカルとcompose） |
+| Backend 本番イメージ | 80 | Thruster経由のAPIサーバ |
+| Frontend 本番イメージ | 80 | Nginx配信 |
 
 ## データ構造
 
