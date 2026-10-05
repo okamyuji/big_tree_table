@@ -1,0 +1,25 @@
+# Production stack: nginx terminates TLS and is the only published service;
+# the Rails image (Thruster on 80) is reachable only through it.
+#
+#   docker compose -f compose.production.yml up -d --build
+#
+# TLS_CERT_DIR must hold tls.crt and tls.key. Keep it outside the repository.
+services:
+  backend:
+    build: .
+    environment:
+      RAILS_MASTER_KEY: ${RAILS_MASTER_KEY:?set RAILS_MASTER_KEY}
+      API_BASIC_AUTH_USER: ${API_BASIC_AUTH_USER:?set API_BASIC_AUTH_USER}
+      API_BASIC_AUTH_PASSWORD: ${API_BASIC_AUTH_PASSWORD:?set API_BASIC_AUTH_PASSWORD}
+      DB_HOST: ${DB_HOST:?set DB_HOST}
+      BIG_TREE_TABLE_DATABASE_PASSWORD: ${BIG_TREE_TABLE_DATABASE_PASSWORD:?set BIG_TREE_TABLE_DATABASE_PASSWORD}
+
+  frontend:
+    build: ./frontend
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ${TLS_CERT_DIR:?set TLS_CERT_DIR to a directory with tls.crt and tls.key}:/etc/nginx/certs:ro
+    depends_on:
+      - backend

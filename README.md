@@ -104,7 +104,36 @@ Docker Composeで起動した場合も、フロントエンドはViteの開発�
 
 APIのBasic認証を有効にするには、ホストのシェルで`API_BASIC_AUTH_USER`と`API_BASIC_AUTH_PASSWORD`を設定してから`docker compose up -d`を実行してください。composeはこの2つをbackendに渡します。
 
-本番用のイメージは、`Dockerfile`（Thrusterが80番で受けてRailsへ渡す）と`frontend/Dockerfile`（Nginxが80番で配信し、`/api/`を`backend:80`へ転送する）です。
+## 本番構成
+
+本番では、`frontend/Dockerfile`のNginxを前段に置き、そこでTLSを終端します。ブラウザは`/api`を呼ぶたびにBasic認証の資格情報を送るので、ブラウザとNginxの間は必ずHTTPSにします。
+
+- Nginxは443番でTLS 1.2と1.3だけを受けます。80番への要求は、同じパスの`https://`へ301で転送します。
+- Nginxは`/api/`を`backend:80`へ転送します。`backend`は`Dockerfile`のイメージで、Thrusterが80番の平文で受けてRailsへ渡します。
+- Railsは`config.assume_ssl`ですべての要求をHTTPSとして扱い、`config.force_ssl`でHSTSを付けます。この前提は、Nginxより後ろをホストの外へ公開しないことで成り立ちます。
+
+`compose.production.yml`がこの構成です。公開するのはNginxの80番と443番だけで、backendはNginxからしか届きません。証明書と秘密鍵は、`TLS_CERT_DIR`のディレクトリに`tls.crt`と`tls.key`として置きます。このディレクトリはリポジトリの外に置いてください。
+
+```bash
+export TLS_CERT_DIR=/etc/big_tree_table/certs
+export RAILS_MASTER_KEY=... API_BASIC_AUTH_USER=... API_BASIC_AUTH_PASSWORD=...
+export DB_HOST=... BIG_TREE_TABLE_DATABASE_PASSWORD=...
+docker compose -f compose.production.yml up -d --build
+```
+
+どれかの変数が未設定なら、composeは起動前にエラーで止まります。証明書が見つからないときは、Nginxが起動しません。
+
+自分のマシンでこの構成を試すときは、[mkcert](https://github.com/FiloSottile/mkcert)で`localhost`の証明書を作ってください。開発用の`compose.yml`はViteの開発サーバを使うので、証明書は要りません。
+
+```bash
+mkdir -p ~/.local/share/big_tree_table/certs
+mkcert -install
+mkcert -cert-file ~/.local/share/big_tree_table/certs/tls.crt \
+       -key-file ~/.local/share/big_tree_table/certs/tls.key localhost 127.0.0.1
+export TLS_CERT_DIR=~/.local/share/big_tree_table/certs
+```
+
+`config/deploy.yml`のKamalはbackendのイメージだけを配備し、Nginxを通りません。Kamalで配備するときも、このNginxを前段に置いてください。
 
 ## ポート
 
@@ -113,8 +142,9 @@ APIのBasic認証を有効にするには、ホストのシェルで`API_BASIC_A
 | MySQL | 3306 | ローカル開発用DB（既定） |
 | Backend (Rails) | 3000 | 開発用APIサーバ |
 | Frontend (Vite) | 5173 | 開発サーバ（ローカルとcompose） |
-| Backend 本番イメージ | 80 | Thruster経由のAPIサーバ |
-| Frontend 本番イメージ | 80 | Nginx配信 |
+| Backend 本番イメージ | 80 | Thruster経由のAPIサーバ（Nginxからのみ） |
+| Frontend 本番イメージ | 443 | NginxのTLS終端と配信 |
+| Frontend 本番イメージ | 80 | 443番への301転送 |
 
 ## データ構造
 
@@ -356,5 +386,6 @@ big_tree_table/
 ├── test/
 │   ├── controllers/api/v1/
 │   └── models/
-└── compose.yml                 # mysql + backend + frontend
+├── compose.yml                 # 開発用: mysql + backend + frontend (Vite)
+└── compose.production.yml      # 本番用: Nginx (TLS終端) + backend
 ```
