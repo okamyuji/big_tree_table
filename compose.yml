@@ -38,6 +38,9 @@ services:
       DB_USER: root
       DB_PASSWORD: password
       BIG_TREE_TABLE_CORS_ORIGINS: "http://localhost:5173,http://127.0.0.1:5173"
+      # Unset = API open (development). Set both in the host shell to require Basic auth.
+      API_BASIC_AUTH_USER: ${API_BASIC_AUTH_USER:-}
+      API_BASIC_AUTH_PASSWORD: ${API_BASIC_AUTH_PASSWORD:-}
     volumes:
       - .:/rails
       - bundle-cache:/usr/local/bundle

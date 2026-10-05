@@ -63,6 +63,21 @@ SEED_RESET=true SEED_ORDERS=1000000 bin/rails db:seed
 bin/rails server -p 3000
 ```
 
+`/api`はHTTP Basic認証で保護します。資格情報は環境変数`API_BASIC_AUTH_USER`と`API_BASIC_AUTH_PASSWORD`から読みます。
+
+| 環境 | 2つとも設定 | どちらかが未設定 |
+| --- | --- | --- |
+| development / test | Basic認証を要求 | 認証なしで応答 |
+| production | Basic認証を要求 | すべて401で拒否 |
+
+認証を有効にして起動する例です。
+
+```bash
+API_BASIC_AUTH_USER=viewer API_BASIC_AUTH_PASSWORD='<任意のパスワード>' bin/rails server -p 3000
+```
+
+ブラウザは初回のAPI呼び出しで認証ダイアログを出し、以後は入力した資格情報を自動で送ります。Playwrightのe2eは、同じ環境変数があれば`httpCredentials`として送ります。
+
 ### 5. フロントエンド (Vite) を起動
 
 ```bash
@@ -82,6 +97,8 @@ docker compose up -d
 ```
 
 Docker Compose で起動した場合、フロントエンドは <http://localhost:3000> で配信されます (Nginx 経由)。
+
+APIのBasic認証を有効にするには、ホストのシェルで`API_BASIC_AUTH_USER`と`API_BASIC_AUTH_PASSWORD`を設定してから`docker compose up -d`を実行します。composeはこの2つをbackendに渡します。
 
 ## ポート
 
