@@ -15,6 +15,8 @@ module Api
   class BaseController < ActionController::API
     include ActionController::HttpAuthentication::Basic::ControllerMethods
 
+    AUTH_REALM = "big_tree_table API"
+
     RATE_LIMIT        = 300
     RATE_LIMIT_WINDOW = 1.minute
 
@@ -35,7 +37,7 @@ module Api
         return
       end
 
-      http_basic_authenticate_or_request_with(name: user, password: password, realm: "big_tree_table API")
+      http_basic_authenticate_or_request_with(name: user, password: password, realm: AUTH_REALM)
     end
   end
 end

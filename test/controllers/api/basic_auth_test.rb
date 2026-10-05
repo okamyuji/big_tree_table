@@ -4,6 +4,9 @@ module Api
   class BasicAuthTest < ActionDispatch::IntegrationTest
     USER = "viewer".freeze
     PASSWORD = SecureRandom.hex(16)
+    WRONG = SecureRandom.hex(16)
+    BLANK = " " * 2
+    EMPTY = String.new.freeze
 
     setup do
       @saved_env = ENV.to_h.slice("API_BASIC_AUTH_USER", "API_BASIC_AUTH_PASSWORD")
@@ -48,8 +51,8 @@ module Api
     test "credentials configured: wrong user or password gets 401" do
       configure_credentials
 
-      [ [ USER, "wrong" ], [ "wrong", PASSWORD ] ].each do |user, password|
-        get "/api/v1/orders/tree", headers: auth_header(user, password)
+      [ [ USER, WRONG ], [ WRONG, PASSWORD ] ].each do |name, pass|
+        get "/api/v1/orders/tree", headers: auth_header(name, pass)
 
         assert_response :unauthorized
       end
@@ -73,7 +76,7 @@ module Api
 
       assert_response :unauthorized
 
-      get "/api/v1/orders", headers: auth_header("", "")
+      get "/api/v1/orders", headers: auth_header(EMPTY, EMPTY)
 
       assert_response :unauthorized
     end
@@ -84,8 +87,8 @@ module Api
       [
         { "API_BASIC_AUTH_USER" => USER, "API_BASIC_AUTH_PASSWORD" => nil },
         { "API_BASIC_AUTH_USER" => nil, "API_BASIC_AUTH_PASSWORD" => PASSWORD },
-        { "API_BASIC_AUTH_USER" => USER, "API_BASIC_AUTH_PASSWORD" => "  " },
-        { "API_BASIC_AUTH_USER" => "  ", "API_BASIC_AUTH_PASSWORD" => PASSWORD }
+        { "API_BASIC_AUTH_USER" => USER, "API_BASIC_AUTH_PASSWORD" => BLANK },
+        { "API_BASIC_AUTH_USER" => BLANK, "API_BASIC_AUTH_PASSWORD" => PASSWORD }
       ].each do |vars|
         vars.each { |k, v| v.nil? ? ENV.delete(k) : ENV[k] = v }
 

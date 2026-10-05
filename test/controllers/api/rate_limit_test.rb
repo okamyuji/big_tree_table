@@ -9,6 +9,7 @@ module Api
       @saved_env = ENV.to_h.slice("API_BASIC_AUTH_USER", "API_BASIC_AUTH_PASSWORD")
       @user = "viewer"
       @secret = SecureRandom.hex(16)
+      @wrong = SecureRandom.hex(16)
       ENV["API_BASIC_AUTH_USER"] = @user
       ENV["API_BASIC_AUTH_PASSWORD"] = @secret
     end
@@ -24,26 +25,34 @@ module Api
       get "/api/v1/orders", headers: { "HTTP_AUTHORIZATION" => credentials }, env: { "REMOTE_ADDR" => ip }
     end
 
+    def client(host)
+      "203.0.113.#{host}"
+    end
+
+    def forwarded_client(host)
+      "198.51.100.#{host}"
+    end
+
     def exhaust_with_wrong_password(ip)
       LIMIT.times do
-        call_api(ip, "wrong")
+        call_api(ip, @wrong)
 
         assert_response :unauthorized
       end
     end
 
     test "failed attempts count toward the limit, so the next request gets 429 even with the right password" do
-      exhaust_with_wrong_password("203.0.113.10")
+      exhaust_with_wrong_password(client(10))
 
-      call_api("203.0.113.10", @secret)
+      call_api(client(10), @secret)
 
       assert_response :too_many_requests
     end
 
     test "the limit is per client IP" do
-      exhaust_with_wrong_password("203.0.113.11")
+      exhaust_with_wrong_password(client(11))
 
-      call_api("203.0.113.12", @secret)
+      call_api(client(12), @secret)
 
       assert_response :success
     end
@@ -56,28 +65,28 @@ module Api
             env: { "REMOTE_ADDR" => "172.18.0.4" }
       end
 
-      LIMIT.times { proxied.call("198.51.100.1", "wrong") }
-      proxied.call("198.51.100.1", @secret)
+      LIMIT.times { proxied.call(forwarded_client(1), @wrong) }
+      proxied.call(forwarded_client(1), @secret)
 
       assert_response :too_many_requests
 
-      proxied.call("198.51.100.2", @secret)
+      proxied.call(forwarded_client(2), @secret)
 
       assert_response :success
     end
 
     test "the counter key is one API-wide scope, not per controller" do
-      call_api("203.0.113.20", @secret)
+      call_api(client(20), @secret)
 
-      assert Rails.cache.exist?("rate-limit:api:203.0.113.20")
-      assert_not Rails.cache.exist?("rate-limit:api/v1/orders:203.0.113.20")
+      assert Rails.cache.exist?("rate-limit:api:#{client(20)}")
+      assert_not Rails.cache.exist?("rate-limit:api/v1/orders:#{client(20)}")
     end
 
     test "the count resets after the window" do
-      exhaust_with_wrong_password("203.0.113.13")
+      exhaust_with_wrong_password(client(13))
 
       travel WINDOW + 1.second do
-        call_api("203.0.113.13", @secret)
+        call_api(client(13), @secret)
 
         assert_response :success
       end
