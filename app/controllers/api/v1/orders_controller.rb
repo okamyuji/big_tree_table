@@ -39,7 +39,10 @@ module Api
 
         response.set_header("X-Total-Count", total.to_s)
 
-        [ scope, meta(total, page_for(params_hash), per_page_for(params_hash)) ]
+        page     = Order.normalize_page(params_hash[:page])
+        per_page = Order.normalize_per_page(params_hash[:per_page])
+
+        [ scope, meta(total, page, per_page) ]
       end
 
       def list_params
@@ -50,18 +53,6 @@ module Api
           :sort, :order,
           :page, :per_page
         )
-      end
-
-      def page_for(params_hash)
-        n = params_hash[:page].to_i
-        n < 1 ? 1 : n
-      end
-
-      def per_page_for(params_hash)
-        n = params_hash[:per_page].to_i
-        return Order::DEFAULT_PER_PAGE if n <= 0
-
-        [ n, Order::MAX_PER_PAGE ].min
       end
 
       def meta(total, page, per_page)

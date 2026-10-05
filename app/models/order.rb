@@ -30,6 +30,10 @@ class Order < ApplicationRecord
 
   DEFAULT_PER_PAGE = 50
   MAX_PER_PAGE     = 500
+  # An unbounded page builds an OFFSET past MySQL's integer range, which is a
+  # SQL syntax error (HTTP 500). 1M pages still reaches every row of the
+  # 1M-row dataset at per_page=1.
+  MAX_PAGE         = 1_000_000
 
   validates :order_number, :order_type, :order_date,
             :customer_name, :customer_code,
@@ -231,10 +235,8 @@ class Order < ApplicationRecord
   private_class_method :parse_iso_date
 
   def self.normalize_page(value)
-    n = value.to_i
-    n < 1 ? 1 : n
+    value.to_i.clamp(1, MAX_PAGE)
   end
-  private_class_method :normalize_page
 
   def self.normalize_per_page(value)
     n = value.to_i
@@ -242,7 +244,6 @@ class Order < ApplicationRecord
 
     [ n, MAX_PER_PAGE ].min
   end
-  private_class_method :normalize_per_page
 
   def self.normalize_sort_column(value)
     s = value.to_s

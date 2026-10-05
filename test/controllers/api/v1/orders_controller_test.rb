@@ -130,6 +130,15 @@ module Api
 
         assert_equal 1, body["meta"]["page"]
       end
+
+      test "GET /api/v1/orders and /tree clamp an oversized page to MAX_PAGE" do
+        %w[/api/v1/orders /api/v1/orders/tree].each do |path|
+          get path, params: { page: "1#{'0' * 30}" }
+
+          assert_response :success
+          assert_equal Order::MAX_PAGE, JSON.parse(response.body)["meta"]["page"]
+        end
+      end
     end
   end
 end
