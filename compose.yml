@@ -17,7 +17,7 @@ services:
       MYSQL_CHARACTER_SET_SERVER: utf8mb4
       MYSQL_COLLATION_SERVER: utf8mb4_unicode_ci
     ports:
-      - "3306:3306"
+      - "127.0.0.1:3306:3306"
     volumes:
       - mysql-data:/var/lib/mysql
     healthcheck:
@@ -45,7 +45,7 @@ services:
       - .:/rails
       - bundle-cache:/usr/local/bundle
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
     depends_on:
       mysql:
         condition: service_healthy
@@ -62,7 +62,7 @@ services:
       - ./frontend:/app
       - node_modules:/app/node_modules
     ports:
-      - "5173:5173"
+      - "127.0.0.1:5173:5173"
     depends_on:
       - backend
 

@@ -78,14 +78,30 @@ module Api
       assert_response :unauthorized
     end
 
-    test "only one of the two variables set counts as unset" do
-      ENV["API_BASIC_AUTH_USER"] = USER
-      ENV.delete("API_BASIC_AUTH_PASSWORD")
+    test "in production, one variable missing or blank counts as unset and is refused" do
       Rails.env = "production"
 
-      get "/api/v1/orders", headers: auth_header(USER, "")
+      [
+        { "API_BASIC_AUTH_USER" => USER, "API_BASIC_AUTH_PASSWORD" => nil },
+        { "API_BASIC_AUTH_USER" => nil, "API_BASIC_AUTH_PASSWORD" => PASSWORD },
+        { "API_BASIC_AUTH_USER" => USER, "API_BASIC_AUTH_PASSWORD" => "  " },
+        { "API_BASIC_AUTH_USER" => "  ", "API_BASIC_AUTH_PASSWORD" => PASSWORD }
+      ].each do |vars|
+        vars.each { |k, v| v.nil? ? ENV.delete(k) : ENV[k] = v }
 
-      assert_response :unauthorized
+        get "/api/v1/orders", headers: auth_header(vars["API_BASIC_AUTH_USER"].to_s, vars["API_BASIC_AUTH_PASSWORD"].to_s)
+
+        assert_response :unauthorized, vars.inspect
+      end
+    end
+
+    test "in development, one variable missing counts as unset and the API stays open" do
+      ENV["API_BASIC_AUTH_USER"] = USER
+      ENV.delete("API_BASIC_AUTH_PASSWORD")
+
+      get "/api/v1/orders"
+
+      assert_response :success
     end
   end
 end
