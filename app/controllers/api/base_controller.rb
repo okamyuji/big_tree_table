@@ -45,17 +45,23 @@ module Api
         return
       end
 
-      raise ActionController::TooManyRequests if cache_store.read(auth_failure_key).to_i >= AUTH_FAILURE_LIMIT
+      # The browser's first request carries no credentials and cannot guess, so
+      # it is neither counted nor blocked.
+      return request_http_basic_authentication(AUTH_REALM) if request.authorization.blank?
 
-      return if authenticate_with_http_basic do |given_user, given_password|
+      # Count first and judge on the value increment returns: a separate read
+      # would let concurrent guesses all pass the check before any is counted.
+      failures = cache_store.increment(auth_failure_key, 1, expires_in: AUTH_FAILURE_WINDOW).to_i
+      raise ActionController::TooManyRequests if failures > AUTH_FAILURE_LIMIT
+
+      if authenticate_with_http_basic { |given_user, given_password|
         ActiveSupport::SecurityUtils.secure_compare(given_user.to_s, user) &
           ActiveSupport::SecurityUtils.secure_compare(given_password.to_s, password)
+      }
+        cache_store.decrement(auth_failure_key, 1, expires_in: AUTH_FAILURE_WINDOW)
+        return
       end
 
-      # The browser's first request carries no credentials; only count guesses.
-      if request.authorization.present?
-        cache_store.increment(auth_failure_key, 1, expires_in: AUTH_FAILURE_WINDOW)
-      end
       request_http_basic_authentication(AUTH_REALM)
     end
 

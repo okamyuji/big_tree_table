@@ -85,6 +85,43 @@ module Api
       assert_response :success
     end
 
+    # Holds every auth-failure counter access until all racers have arrived, so
+    # concurrent requests touch the counter at the same moment. A timeout keeps
+    # a racer that is never joined (e.g. one already answered) from hanging.
+    class RacingStore < SimpleDelegator
+      def initialize(store, barrier)
+        super(store)
+        @barrier = barrier
+      end
+
+      %i[read increment decrement].each do |name|
+        define_method(name) do |key, *args, **opts|
+          @barrier.wait(1) if key.to_s.start_with?("auth-failure")
+          __getobj__.public_send(name, key, *args, **opts)
+        end
+      end
+    end
+
+    test "concurrent wrong guesses cannot exceed the failure limit" do
+      racers = 5
+      fail_times(client(37), LIMIT - 1)
+      original = Api::BaseController.cache_store
+      Api::BaseController.config.cache_store = RacingStore.new(original, Concurrent::CyclicBarrier.new(racers))
+
+      statuses = Array.new(racers) do
+        Thread.new do
+          session = open_session
+          credentials = ActionController::HttpAuthentication::Basic.encode_credentials(@user, @wrong)
+          session.get "/api/v1/orders", headers: { "HTTP_AUTHORIZATION" => credentials }, env: { "REMOTE_ADDR" => client(37) }
+          session.response.status
+        end
+      end.map(&:value)
+
+      assert_equal [ 401, 429, 429, 429, 429 ], statuses.sort
+    ensure
+      Api::BaseController.config.cache_store = original
+    end
+
     test "the failure count resets after the window" do
       fail_times(client(36), LIMIT)
 
