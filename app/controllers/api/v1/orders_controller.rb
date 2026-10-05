@@ -12,37 +12,38 @@ module Api
     class OrdersController < Api::BaseController
       # GET /api/v1/orders
       def index
-        params_hash = list_params.to_h.symbolize_keys
-        scope = Order.search(params_hash)
-        total = Order.search_count(params_hash)
-        per   = per_page_for(params_hash)
-        page  = page_for(params_hash)
-
-        response.set_header("X-Total-Count", total.to_s)
+        scope, page_meta = paged_search
 
         render json: {
           orders: scope.map { |o| Order.order_payload(o) },
-          meta:   meta(total, page, per)
+          meta:   page_meta
         }
       end
 
       # GET /api/v1/orders/tree
       def tree
-        params_hash = list_params.to_h.symbolize_keys
-        scope = Order.search(params_hash)
-        total = Order.search_count(params_hash)
-        per   = per_page_for(params_hash)
-        page  = page_for(params_hash)
-
-        response.set_header("X-Total-Count", total.to_s)
+        scope, page_meta = paged_search
 
         render json: {
           tree: Order.build_tree(scope.to_a),
-          meta: meta(total, page, per)
+          meta: page_meta
         }
       end
 
       private
+
+      def paged_search
+        params_hash = list_params.to_h.symbolize_keys
+        scope = Order.search(params_hash)
+        total = Order.search_count(params_hash)
+
+        response.set_header("X-Total-Count", total.to_s)
+
+        page     = Order.normalize_page(params_hash[:page])
+        per_page = Order.normalize_per_page(params_hash[:per_page])
+
+        [ scope, meta(total, page, per_page) ]
+      end
 
       def list_params
         params.permit(
@@ -52,18 +53,6 @@ module Api
           :sort, :order,
           :page, :per_page
         )
-      end
-
-      def page_for(params_hash)
-        n = params_hash[:page].to_i
-        n < 1 ? 1 : n
-      end
-
-      def per_page_for(params_hash)
-        n = params_hash[:per_page].to_i
-        return Order::DEFAULT_PER_PAGE if n <= 0
-
-        [ n, Order::MAX_PER_PAGE ].min
       end
 
       def meta(total, page, per_page)

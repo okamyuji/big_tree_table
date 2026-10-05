@@ -96,6 +96,19 @@ module Api
         assert_equal order["order"]["order_number"], order["label"]
       end
 
+      test "GET /api/v1/orders/tree returns paging meta and X-Total-Count like the flat list" do
+        get "/api/v1/orders/tree", params: { per_page: 2, page: 2 }
+
+        assert_response :success
+        meta = JSON.parse(response.body)["meta"]
+
+        assert_equal 2, meta["page"]
+        assert_equal 2, meta["per_page"]
+        assert_equal Order.count, meta["total"]
+        assert_equal (Order.count.to_f / 2).ceil, meta["total_pages"]
+        assert_equal Order.count.to_s, response.headers["X-Total-Count"]
+      end
+
       test "GET /api/v1/orders defaults paging to page=1, per_page=DEFAULT_PER_PAGE" do
         get "/api/v1/orders"
         body = JSON.parse(response.body)
@@ -116,6 +129,15 @@ module Api
         body = JSON.parse(response.body)
 
         assert_equal 1, body["meta"]["page"]
+      end
+
+      test "GET /api/v1/orders and /tree clamp an oversized page to MAX_PAGE" do
+        %w[/api/v1/orders /api/v1/orders/tree].each do |path|
+          get path, params: { page: "1#{'0' * 30}" }
+
+          assert_response :success
+          assert_equal Order::MAX_PAGE, JSON.parse(response.body)["meta"]["page"]
+        end
       end
     end
   end

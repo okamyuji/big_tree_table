@@ -68,6 +68,17 @@ class OrderTest < ActiveSupport::TestCase
     assert_match(/OFFSET 0/, sql_zero)
   end
 
+  test "search caps page at MAX_PAGE so OFFSET stays a valid integer" do
+    max_offset = (Order::MAX_PAGE - 1) * 50
+    at_max     = Order.search(page: Order::MAX_PAGE, per_page: 50).to_sql
+    over_max   = Order.search(page: Order::MAX_PAGE + 1, per_page: 50).to_sql
+    huge       = Order.search(page: "1#{'0' * 30}", per_page: 50)
+
+    assert_match(/OFFSET #{max_offset}\)/, at_max)
+    assert_match(/OFFSET #{max_offset}\)/, over_max)
+    assert_nothing_raised { huge.to_a }
+  end
+
   # ----- deferred-join switch ----------------------------------------------
 
   test "search uses plain LIMIT/OFFSET below the offset threshold" do
