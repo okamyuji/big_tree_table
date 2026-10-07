@@ -17,7 +17,7 @@ jobs:
   gitleaks:
     # gitleaks auto-detects .gitleaks.toml at the repo root; the reusable
     # workflow provides GITHUB_TOKEN (required for pull_request scans).
-    uses: okamyuji/reusable-workflows/.github/workflows/security-scan.yml@v1
+    uses: okamyuji/reusable-workflows/.github/workflows/security-scan.yml@test/ubuntu-26.04
 
   # Gemfile.lock self-consistency guard (lockfile job only; lint/scan/tests
   # stay in the repo-specific quality job below). Stale CHECKSUMS come from
@@ -30,7 +30,7 @@ jobs:
     permissions:
       contents: read
       pull-requests: write
-    uses: okamyuji/reusable-workflows/.github/workflows/rails-ci.yml@v1
+    uses: okamyuji/reusable-workflows/.github/workflows/rails-ci.yml@test/ubuntu-26.04
     with:
       run-lint: false
       security-scan: false
@@ -46,7 +46,7 @@ jobs:
   # audit, which rails-ci.yml would run a second time in separate jobs.
   quality:
     name: rubocop · sorbet · brakeman · audit · tests · build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
 
     services:
       mysql:
@@ -104,7 +104,7 @@ jobs:
 
   frontend:
     name: frontend (typecheck · lint · vitest)
-    uses: okamyuji/reusable-workflows/.github/workflows/node-ci.yml@v1
+    uses: okamyuji/reusable-workflows/.github/workflows/node-ci.yml@test/ubuntu-26.04
     with:
       node-version: "24"
       working-directory: frontend
