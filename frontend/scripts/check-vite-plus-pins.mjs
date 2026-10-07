@@ -1,7 +1,7 @@
 // Vite+ は vite-plus、vite の別名（vite-plus-core）、vitest の版をそろえて上げる必要がある。
 // Dependabot は1つずつ上げるので、ずれたまま CI を通さないよう、入った版を突き合わせる。
 // https://viteplus.dev/guide/upgrade-project
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 const CORE = "@voidzero-dev/vite-plus-core";
@@ -13,8 +13,9 @@ export function findMisalignedPins({ vitePlus, vite, vitest }) {
       `vite is ${vite.name}@${vite.version}, expected ${CORE}@${vitePlus.version}`,
     );
   }
+  // ルートに vitest が無ければ、Vitest は vite-plus が持つ1組だけで、分かれようがない。
   const bundled = vitePlus.dependencies?.vitest;
-  if (vitest.version !== bundled) {
+  if (vitest && vitest.version !== bundled) {
     problems.push(
       `vitest is ${vitest.version}, expected ${bundled} (bundled with vite-plus ${vitePlus.version})`,
     );
@@ -22,8 +23,9 @@ export function findMisalignedPins({ vitePlus, vite, vitest }) {
   return problems;
 }
 
-function readInstalled(name) {
+function readInstalled(name, { optional = false } = {}) {
   const url = new URL(`../node_modules/${name}/package.json`, import.meta.url);
+  if (optional && !existsSync(url)) return undefined;
   return JSON.parse(readFileSync(url, "utf8"));
 }
 
@@ -31,10 +33,16 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const problems = findMisalignedPins({
     vitePlus: readInstalled("vite-plus"),
     vite: readInstalled("vite"),
-    vitest: readInstalled("vitest"),
+    vitest: readInstalled("vitest", { optional: true }),
   });
   if (problems.length > 0) {
-    console.error([...problems, "Run `pnpm exec vp migrate` to realign them."].join("\n"));
+    console.error(
+      [
+        ...problems,
+        "Run `pnpm exec vp migrate` to realign them, then revert the minimumReleaseAgeExclude",
+        "and peerDependencyRules.allowAny entries it adds to pnpm-workspace.yaml.",
+      ].join("\n"),
+    );
     process.exit(1);
   }
 }

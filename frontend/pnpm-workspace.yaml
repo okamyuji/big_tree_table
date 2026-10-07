@@ -23,11 +23,12 @@ overrides:
   vitest@*: "catalog:"
 
 # vite を Vite+ に差し替えている都合で、vite の peer を要求するパッケージからは
-# バージョンが vite-plus-core の版（1.0.0）に見える。strictPeerDependencies を有効にしたままにするため、
-# このバージョンを明示的に許可する。
+# バージョンが vite-plus-core の版（1.x）に見える。strictPeerDependencies を有効にしたままにするため、
+# この範囲を明示的に許可する。範囲にしておくと、1.x を手で上げてもここは直さなくてよい。
+# vp migrate はここを "*" と allowAny に書き換えるので、migrate の後はこの形に戻す。
 peerDependencyRules:
   allowedVersions:
-    vite: "1.0.0"
+    vite: "1"
 
 # --- サプライチェーン対策 ---
 # 公開から7日未満のパッケージを取得しない。chalk/debug (2024)、lottie-player (2024)、
@@ -54,8 +55,8 @@ audit:
 verifyStoreIntegrity: true
 
 # --- Vite+ の版 ---
-# vite-plus を上げるときは3つをそろえ、peerDependencyRules の vite も同じ版にする。
-# vitest の版は `vp toolchain vitest` が示す同梱の版にする。
+# 3つはそろえて上げる。vite-plus を上げたら `pnpm exec vp migrate` で残りの2つを合わせる。
+# ずれたままだと lint（scripts/check-vite-plus-pins.mjs）が失敗する。
 catalog:
   vite: npm:@voidzero-dev/vite-plus-core@1.0.0
   vitest: 5.0.1
