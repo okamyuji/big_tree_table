@@ -5,6 +5,10 @@ updates:
   schedule:
     interval: weekly
   open-pull-requests-limit: 10
+  # Same 7-day release-age wait as frontend's pnpm minimumReleaseAge. It also
+  # delays security updates for gems published less than 7 days ago.
+  cooldown:
+    default-days: 7
   # One grouped PR per week: concurrent bundler PRs conflict on adjacent
   # Gemfile.lock CHECKSUMS lines, and hand-resolving that conflict is how
   # stale CHECKSUMS reached main (PR #44/#52/#56).
