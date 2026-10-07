@@ -3,12 +3,12 @@
 # https://pnpm.io/settings
 
 # --- 依存の上書き ---
-# vite / vitest は Vite+ (@voidzero-dev) のディストリビューションへ差し替える。
+# vite / vitest は下の catalog の版（Vite+ が同梱する版）にそろえる。
+# 依存がほかの版の vitest を入れると、mock や expect が2組に分かれるため。
+# https://viteplus.dev/guide/migrate
 # それ以外は脆弱性のあるバージョンを踏まないための下限固定。
 # 範囲指定 (">=5.0.9" など) だと解決版が揺れて脆弱版が残るため、必ず具体バージョンで書く。
 overrides:
-  vite: "npm:@voidzero-dev/vite-plus-core@0.1.24"
-  vitest: "npm:@voidzero-dev/vite-plus-test@0.1.24"
   "brace-expansion@<1.1.21": "1.1.21"
   "brace-expansion@>=3.0.0 <5.0.12": "5.0.12"
   "undici@>=7.0.0 <7.29.0": "^7.29.0"
@@ -19,13 +19,15 @@ overrides:
   "nanoid@<3.3.17": "^3.3.17"
   "tinypool@<2.1.2": "2.1.2"
   "source-map-js@<1.2.2": "1.2.2"
+  vite@*: "catalog:"
+  vitest@*: "catalog:"
 
 # vite を Vite+ に差し替えている都合で、vite の peer を要求するパッケージからは
-# バージョンが 0.1.24 に見える。strictPeerDependencies を有効にしたままにするため、
+# バージョンが vite-plus-core の版（1.0.0）に見える。strictPeerDependencies を有効にしたままにするため、
 # このバージョンを明示的に許可する。
 peerDependencyRules:
   allowedVersions:
-    vite: "0.1.24"
+    vite: "1.0.0"
 
 # --- サプライチェーン対策 ---
 # 公開から7日未満のパッケージを取得しない。chalk/debug (2024)、lottie-player (2024)、
@@ -50,3 +52,11 @@ audit:
 
 # 整合性ハッシュが lockfile と一致しなければ install を失敗させる（既定だが明示）。
 verifyStoreIntegrity: true
+
+# --- Vite+ の版 ---
+# vite-plus を上げるときは3つをそろえ、peerDependencyRules の vite も同じ版にする。
+# vitest の版は `vp toolchain vitest` が示す同梱の版にする。
+catalog:
+  vite: npm:@voidzero-dev/vite-plus-core@1.0.0
+  vitest: 5.0.1
+  vite-plus: 1.0.0
