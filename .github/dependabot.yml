@@ -5,8 +5,8 @@ updates:
   schedule:
     interval: weekly
   open-pull-requests-limit: 10
-  # Same 7-day release-age wait as frontend's pnpm minimumReleaseAge. It also
-  # delays security updates for gems published less than 7 days ago.
+  # Same 7-day release-age wait as frontend's pnpm minimumReleaseAge.
+  # Security updates are not affected (cooldown applies to version updates only).
   cooldown:
     default-days: 7
   # One grouped PR per week: concurrent bundler PRs conflict on adjacent

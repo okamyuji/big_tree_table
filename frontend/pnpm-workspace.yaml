@@ -38,7 +38,7 @@ minimumReleaseAge: 10080 # 60 * 24 * 7 = 7日（分）
 # 上記ポリシーの例外。source-map-js 1.2.2 は 2026-09-30 公開の GHSA-68fv-2mgg-jv7q
 # 修正版で、公開から7日未満のため既定では取得できない。脆弱性解消を優先して、この版だけを
 # 除外する。pnpm は lockfile の各エントリもこのポリシーで検証するため、7日が過ぎる前に
-# 消すと install が失敗する。2026-10-07T14:08Z 以降は削除してよい。
+# 消すと install が失敗する。2026-10-07T14:09Z 以降は削除してよい。
 minimumReleaseAgeExclude:
   - source-map-js@1.2.2
 
