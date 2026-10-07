@@ -293,15 +293,14 @@ GEM
     rubydex (0.4.1-aarch64-linux)
     rubydex (0.4.1-arm64-darwin)
     rubydex (0.4.1-x86_64-linux)
-    rubyzip (3.6.0)
+    rubyzip (3.7.0)
     securerandom (0.4.1)
-    selenium-webdriver (4.49.0)
+    selenium-webdriver (4.50.0)
       base64 (~> 0.2)
       logger (~> 1.4)
-      rexml (~> 3.2, >= 3.2.5)
       rubyzip (>= 1.2.2, < 4.0)
       websocket (~> 1.0)
-    simplecov (1.3.1)
+    simplecov (1.3.2)
     solid_cache (1.0.10)
       activejob (>= 7.2)
       activerecord (>= 7.2)
@@ -313,15 +312,15 @@ GEM
       fugit (~> 1.11)
       railties (>= 7.1)
       thor (>= 1.3.1)
-    sorbet (0.6.13509)
-      sorbet-static (= 0.6.13509)
-    sorbet-runtime (0.6.13509)
-    sorbet-static (0.6.13509-aarch64-linux)
-    sorbet-static (0.6.13509-universal-darwin)
-    sorbet-static (0.6.13509-x86_64-linux)
-    sorbet-static-and-runtime (0.6.13509)
-      sorbet (= 0.6.13509)
-      sorbet-runtime (= 0.6.13509)
+    sorbet (0.6.13511)
+      sorbet-static (= 0.6.13511)
+    sorbet-runtime (0.6.13511)
+    sorbet-static (0.6.13511-aarch64-linux)
+    sorbet-static (0.6.13511-universal-darwin)
+    sorbet-static (0.6.13511-x86_64-linux)
+    sorbet-static-and-runtime (0.6.13511)
+      sorbet (= 0.6.13511)
+      sorbet-runtime (= 0.6.13511)
     spoom (1.8.8)
       erubi (>= 1.10.0)
       prism (>= 0.28.0)
@@ -516,18 +515,18 @@ CHECKSUMS
   rubydex (0.4.1-aarch64-linux) sha256=abc1c9eb22479f60dd015fa81373163c5a71f2700b76bced1282631686bd6271
   rubydex (0.4.1-arm64-darwin) sha256=d23720253876d88fb98954e5d3a1ef9696a269697acf50e3ab53cdfbb2b66b96
   rubydex (0.4.1-x86_64-linux) sha256=4e2c8398c9fc585485b54edd28f5ecf76b5a02255e177b6f8402e9d2afffd51b
-  rubyzip (3.6.0) sha256=268994d44d62282d1cfd99bf10eae48d7267199158ad7ea3e1fee2da9458b695
+  rubyzip (3.7.0) sha256=65c19294da75297a939006f3516deacc33185fbd721ff1954f7a231db6d3e121
   securerandom (0.4.1) sha256=cc5193d414a4341b6e225f0cb4446aceca8e50d5e1888743fac16987638ea0b1
-  selenium-webdriver (4.49.0) sha256=b430f091a3cababb356b6f6132e0e4f385b017819355f563557e1537819edc89
-  simplecov (1.3.1) sha256=b326d38e819053499aa2ebe35d544d8bd780eba143a50f48a624b450ad87feec
+  selenium-webdriver (4.50.0) sha256=d12f94025bc33af44428ed6b8def4896a7bb9c4521212579241650d6cb060fcb
+  simplecov (1.3.2) sha256=2a22ec1759f1b8db60881a2e038758956fc69ef93ed669be0bde0678de6d0e85
   solid_cache (1.0.10) sha256=bc05a2fb3ac78a6f43cbb5946679cf9db67dd30d22939ededc385cb93e120d41
   solid_queue (1.7.0) sha256=6566b70b801d1c317c81bba7bcdd5677c019afac584a30374b4164002ca356d3
-  sorbet (0.6.13509) sha256=a147d20eebefc5adaf3c9f9c8dd9b67dad6891085c9c070c7df4f51e9947d4d2
-  sorbet-runtime (0.6.13509) sha256=87f3668ddb19c47fbd3004414c639fe557974147b7bc79c850004face0151777
-  sorbet-static (0.6.13509-aarch64-linux) sha256=13bc81223318906680ba5122dc59f38338b6d686159809abb54406e8d886cbd4
-  sorbet-static (0.6.13509-universal-darwin) sha256=aaa7b48b36cae97fd17c0a0f5f3531503ee9d6d9970cc2ee0b139ee0ab1b2709
-  sorbet-static (0.6.13509-x86_64-linux) sha256=06314bdcc461aae21efb3aafaddf570531e6ba63126c2969aa1129c4d468e810
-  sorbet-static-and-runtime (0.6.13509) sha256=3b8bffa979bf3e1bc645d727233e2b339e0d663d9e7937874a30eb82de91d45d
+  sorbet (0.6.13511) sha256=77989937efc6a95cd37f92b0de7dee67f8b220f4187ce49c3a3c623e0a2fb87d
+  sorbet-runtime (0.6.13511) sha256=657893177bcc55e7b5c55640105de6659dfcb8dc52fd701a6d969468f6043a94
+  sorbet-static (0.6.13511-aarch64-linux) sha256=8783a8038412a6770d25ffa17b9b5ab9db49efd4f7fa327ed692d667ca36c8fd
+  sorbet-static (0.6.13511-universal-darwin) sha256=1d9c8b26cb2721ac7d25c98ff071a03190e779bef4d7ced9043a47dba1beaf45
+  sorbet-static (0.6.13511-x86_64-linux) sha256=a974d19b736c5e3ceef28acd8114c7f5f2c7928a28eb97f357b3f9cd1f7a7ed0
+  sorbet-static-and-runtime (0.6.13511) sha256=aa8406ed9fa00e2d70eb1bc390f7147336fe04f1d3ac10d4fdc6aa41283d2c02
   spoom (1.8.8) sha256=c7773244003ecfb3627380607dd77d2df62c5909e3effe6e77613ac4c45f5f76
   stimulus-rails (1.3.4) sha256=765676ffa1f33af64ce026d26b48e8ffb2e0b94e0f50e9119e11d6107d67cb06
   tapioca (0.20.0) sha256=b375ed7bf51d2c86c09543eafedd0de85513634187c0f7a062615af8bb9347a0
