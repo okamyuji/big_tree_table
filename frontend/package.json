@@ -9,7 +9,7 @@
     "test": "vp test -- --run",
     "typecheck": "tsc -b",
     "build": "tsc -b && vp build",
-    "lint": "eslint .",
+    "lint": "node scripts/check-vite-plus-pins.mjs && eslint .",
     "preview": "vp preview"
   },
   "dependencies": {
