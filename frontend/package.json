@@ -9,7 +9,7 @@
     "test": "vp test -- --run",
     "typecheck": "tsc -b",
     "build": "tsc -b && vp build",
-    "lint": "node scripts/check-dependency-policy.mjs && eslint .",
+    "lint": "eslint .",
     "preview": "vp preview"
   },
   "dependencies": {

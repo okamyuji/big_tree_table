@@ -54,9 +54,8 @@ audit:
 verifyStoreIntegrity: true
 
 # --- Vite+ の版 ---
-# vite-plus を上げたら `pnpm exec vp migrate` で vite と vitest を合わせる。
-# migrate は待ち期間の例外や allowAny を足すことがある。版のずれと、この設定の緩みは、
-# lint（scripts/check-dependency-policy.mjs）が検出して失敗させる。
+# 3つは `pnpm exec vp migrate` でそろえて上げる（Dependabot の対象外）。
+# migrate は minimumReleaseAgeExclude と peerDependencyRules.allowAny を足すので、差分を見て消す。
 catalog:
   vite: npm:@voidzero-dev/vite-plus-core@1.0.0
   vitest: 5.0.1

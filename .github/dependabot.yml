@@ -29,11 +29,11 @@ updates:
   ignore:
     - dependency-name: typescript
       versions: [">=6.1.0"]
-    # vite (the vite-plus-core alias) and vitest follow the vite-plus version and must
-    # move with it; bumping one alone fails peer resolution. Dependabot proposes only
-    # vite-plus; run `pnpm exec vp migrate` on that PR. scripts/check-dependency-policy.mjs
-    # fails lint until the versions match and the pnpm policy is intact.
+    # vite-plus, vite (the vite-plus-core alias) and vitest must move together, but
+    # Dependabot bumps them one at a time. Update them by hand with `pnpm exec vp migrate`.
+    # Security alerts still arrive; ignore only affects Dependabot pull requests.
     # https://viteplus.dev/guide/upgrade-project
+    - dependency-name: vite-plus
     - dependency-name: vite
     - dependency-name: vitest
   groups:
