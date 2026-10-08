@@ -37,6 +37,13 @@ peerDependencyRules:
 # それは意図的にレビューされた例外として扱う。
 minimumReleaseAge: 10080 # 60 * 24 * 7 = 7日（分）
 
+# 先に公開された版よりtrusted publisherやprovenanceの信頼の段階が下がった版を拒否し、installを失敗させる。
+# 侵害された可能性のある版の取得を防ぐ。
+trustPolicy: no-downgrade
+# 判定は公開日時だけで比べる。6.x系の保守版はprovenance付きの7.x系より後に公開されたため外す。
+trustPolicyExclude:
+  - "semver@6.3.1"
+
 # package.json の依存はすべて完全一致で固定しているので、^ や ~ が再混入する
 # 保存を抑止する。
 saveExact: true
