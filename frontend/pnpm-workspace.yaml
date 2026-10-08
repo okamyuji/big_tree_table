@@ -5,7 +5,7 @@
 # --- 依存の上書き ---
 # vite / vitest は下の catalog の版（Vite+ が同梱する版）にそろえる。
 # 依存がほかの版の vitest を入れると、mock や expect が2組に分かれるため。
-# https://viteplus.dev/guide/migrate
+# https://viteplus.dev/guide/upgrade-project
 # それ以外は脆弱性のあるバージョンを踏まないための下限固定。
 # 範囲指定 (">=5.0.9" など) だと解決版が揺れて脆弱版が残るため、必ず具体バージョンで書く。
 overrides:
@@ -24,8 +24,7 @@ overrides:
 
 # vite を Vite+ に差し替えている都合で、vite の peer を要求するパッケージからは
 # バージョンが vite-plus-core の版（1.x）に見える。strictPeerDependencies を有効にしたままにするため、
-# この範囲を明示的に許可する。範囲にしておくと、1.x を手で上げてもここは直さなくてよい。
-# vp migrate はここを "*" と allowAny に書き換えるので、migrate の後はこの形に戻す。
+# この範囲を明示的に許可する。範囲にしておくと、1.x の間はここを直さなくてよい。
 peerDependencyRules:
   allowedVersions:
     vite: "1"
@@ -55,8 +54,9 @@ audit:
 verifyStoreIntegrity: true
 
 # --- Vite+ の版 ---
-# 3つはそろえて上げる。vite-plus を上げたら `pnpm exec vp migrate` で残りの2つを合わせる。
-# ずれたままだと lint（scripts/check-vite-plus-pins.mjs）が失敗する。
+# vite-plus を上げたら `pnpm exec vp migrate` で vite と vitest を合わせる。
+# migrate は待ち期間の例外や allowAny を足すことがある。版のずれと、この設定の緩みは、
+# lint（scripts/check-dependency-policy.mjs）が検出して失敗させる。
 catalog:
   vite: npm:@voidzero-dev/vite-plus-core@1.0.0
   vitest: 5.0.1

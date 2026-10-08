@@ -31,8 +31,8 @@ updates:
       versions: [">=6.1.0"]
     # vite (the vite-plus-core alias) and vitest follow the vite-plus version and must
     # move with it; bumping one alone fails peer resolution. Dependabot proposes only
-    # vite-plus; realign the others on that PR with `pnpm exec vp migrate` and revert
-    # the release-age excludes and peer allowAny it adds (lint fails until they match).
+    # vite-plus; run `pnpm exec vp migrate` on that PR. scripts/check-dependency-policy.mjs
+    # fails lint until the versions match and the pnpm policy is intact.
     # https://viteplus.dev/guide/upgrade-project
     - dependency-name: vite
     - dependency-name: vitest
