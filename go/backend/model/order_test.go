@@ -1,0 +1,349 @@
+package model
+
+import (
+	"reflect"
+	"strings"
+	"testing"
+)
+
+func TestQueryParams_Normalize(t *testing.T) {
+	cases := []struct {
+		name string
+		in   QueryParams
+		want QueryParams
+	}{
+		{
+			name: "defaults applied to empty struct",
+			in:   QueryParams{},
+			want: QueryParams{Page: 1, PerPage: 1, Sort: "id", Order: "asc"},
+		},
+		{
+			name: "page below 1 clamped up",
+			in:   QueryParams{Page: -5, PerPage: 50, Sort: "id", Order: "asc"},
+			want: QueryParams{Page: 1, PerPage: 50, Sort: "id", Order: "asc"},
+		},
+		{
+			name: "page above MaxPage clamped down",
+			in:   QueryParams{Page: MaxPage + 1, PerPage: 50, Sort: "id", Order: "asc"},
+			want: QueryParams{Page: MaxPage, PerPage: 50, Sort: "id", Order: "asc"},
+		},
+		{
+			name: "per_page above MaxPerPage clamped down",
+			in:   QueryParams{Page: 1, PerPage: 999, Sort: "id", Order: "asc"},
+			want: QueryParams{Page: 1, PerPage: MaxPerPage, Sort: "id", Order: "asc"},
+		},
+		{
+			name: "valid values preserved",
+			in:   QueryParams{Page: 5, PerPage: 25, Sort: "order_date", Order: "desc"},
+			want: QueryParams{Page: 5, PerPage: 25, Sort: "order_date", Order: "desc"},
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			got := c.in
+			got.Normalize()
+			if got != c.want {
+				t.Errorf("Normalize() = %#v, want %#v", got, c.want)
+			}
+		})
+	}
+}
+
+func TestBuildQuery_NoFilters(t *testing.T) {
+	p := QueryParams{Page: 1, PerPage: 50, Sort: "id", Order: "asc"}
+	query, args := BuildQuery(p)
+	// pageSize と offset の2つだけ bind される
+	if len(args) != 2 {
+		t.Errorf("expected 2 args (limit, offset), got %d", len(args))
+	}
+	if args[0] != 50 || args[1] != 0 {
+		t.Errorf("expected args [50, 0], got %v", args)
+	}
+	if strings.Contains(query, "WHERE") {
+		t.Error("expected no WHERE clause")
+	}
+	if !strings.Contains(query, "ORDER BY id ASC") {
+		t.Errorf("expected ORDER BY id ASC, got %s", query)
+	}
+	if !strings.Contains(query, "LIMIT ? OFFSET ?") {
+		t.Errorf("expected LIMIT ? OFFSET ?, got %s", query)
+	}
+	// SELECT * 撲滅: カラムを明示していること
+	if strings.Contains(query, "SELECT *") || strings.Contains(query, "SELECT o.*") {
+		t.Errorf("expected explicit column list, got %s", query)
+	}
+}
+
+func TestBuildQuery_WithStatusFilter(t *testing.T) {
+	p := QueryParams{Page: 1, PerPage: 50, Sort: "id", Order: "asc", Status: "受注確認"}
+	query, args := BuildQuery(p)
+	// status + limit + offset で 3 つ
+	if len(args) != 3 {
+		t.Errorf("expected 3 args (status, limit, offset), got %d", len(args))
+	}
+	if args[0] != "受注確認" {
+		t.Errorf("expected first arg '受注確認', got %v", args[0])
+	}
+	if !strings.Contains(query, "WHERE status = ?") {
+		t.Errorf("expected WHERE status = ?, got %s", query)
+	}
+}
+
+func TestBuildQuery_WithDateRange(t *testing.T) {
+	p := QueryParams{Page: 1, PerPage: 50, Sort: "id", Order: "asc", DateFrom: "2023-01-01", DateTo: "2023-12-31"}
+	query, args := BuildQuery(p)
+	// date_from + date_to + limit + offset で 4 つ
+	if len(args) != 4 {
+		t.Errorf("expected 4 args, got %d", len(args))
+	}
+	if !strings.Contains(query, "order_date >= ?") {
+		t.Errorf("expected order_date >= ?, got %s", query)
+	}
+	if !strings.Contains(query, "order_date <= ?") {
+		t.Errorf("expected order_date <= ?, got %s", query)
+	}
+}
+
+func TestBuildQuery_SQLInjectionInSort(t *testing.T) {
+	p := QueryParams{Page: 1, PerPage: 50, Sort: "id; DROP TABLE orders;--", Order: "asc"}
+	query, _ := BuildQuery(p)
+	if !strings.Contains(query, "ORDER BY id ASC") {
+		t.Errorf("expected fallback to ORDER BY id ASC, got %s", query)
+	}
+}
+
+func TestBuildQuery_AllFilters(t *testing.T) {
+	p := QueryParams{
+		Page: 2, PerPage: 20, Sort: "order_date", Order: "desc",
+		OrderType: "受注", Status: "出荷済み",
+		CustomerName: "田中", ProductName: "ボルト",
+		DateFrom: "2023-01-01", DateTo: "2023-12-31",
+	}
+	query, args := BuildQuery(p)
+	// filters 6 + limit + offset で 8
+	if len(args) != 8 {
+		t.Errorf("expected 8 args, got %d", len(args))
+	}
+	if !strings.Contains(query, "ORDER BY order_date DESC") {
+		t.Errorf("expected ORDER BY order_date DESC, got %s", query)
+	}
+	if !strings.Contains(query, "LIMIT ? OFFSET ?") {
+		t.Errorf("expected LIMIT ? OFFSET ?, got %s", query)
+	}
+	if !strings.Contains(query, "customer_name LIKE ?") {
+		t.Error("expected customer_name LIKE ?")
+	}
+	// Check LIKE args have wildcards (filters[0..5] が WHERE 用の args)
+	if args[2] != "%田中%" {
+		t.Errorf("expected %%田中%%, got %v", args[2])
+	}
+	// 末尾2要素が limit と offset
+	if args[6] != 20 || args[7] != 20 {
+		t.Errorf("expected limit=20 offset=20 at tail, got %v %v", args[6], args[7])
+	}
+}
+
+func TestBuildQuery_LikeWildcardEscaped(t *testing.T) {
+	p := QueryParams{Page: 1, PerPage: 50, Sort: "id", Order: "asc", CustomerName: "100%株式会社"}
+	_, args := BuildQuery(p)
+	// LIKE filter + limit + offset で 3
+	if len(args) != 3 {
+		t.Fatalf("expected 3 args, got %d", len(args))
+	}
+	got := args[0].(string)
+	expected := `%100\%株式会社%`
+	if got != expected {
+		t.Errorf("expected LIKE arg %q, got %q", expected, got)
+	}
+}
+
+func TestBuildQuery_InvalidDateIgnored(t *testing.T) {
+	p := QueryParams{Page: 1, PerPage: 50, Sort: "id", Order: "asc", DateFrom: "not-a-date", DateTo: "2024-01-01"}
+	query, args := BuildQuery(p)
+	// 不正なDateFromは無視され、DateToだけが条件に含まれる + limit + offset = 3
+	if len(args) != 3 {
+		t.Fatalf("expected 3 args (date_to, limit, offset), got %d", len(args))
+	}
+	if !strings.Contains(query, "order_date <= ?") {
+		t.Errorf("expected order_date <= ?, got %s", query)
+	}
+	if strings.Contains(query, "order_date >= ?") {
+		t.Errorf("invalid date_from should be ignored, got %s", query)
+	}
+}
+
+func TestBuildQuery_DeferredJoinForLargeOffset(t *testing.T) {
+	// OFFSETが閾値以上の場合、deferred joinに切り替わることを確認
+	p := QueryParams{Page: 501, PerPage: 50, Sort: "order_date", Order: "desc"}
+	query, args := BuildQuery(p)
+	if !strings.Contains(query, "INNER JOIN") {
+		t.Errorf("expected deferred join with INNER JOIN for large offset, got %s", query)
+	}
+	if !strings.Contains(query, "SELECT id FROM orders") {
+		t.Errorf("expected subquery to select only id, got %s", query)
+	}
+	if !strings.Contains(query, "LIMIT ? OFFSET ?") {
+		t.Errorf("expected LIMIT ? OFFSET ?, got %s", query)
+	}
+	// limit と offset が bind されている
+	if len(args) != 2 {
+		t.Errorf("expected 2 args (limit, offset), got %d", len(args))
+	}
+	if args[0] != 50 || args[1] != 25000 {
+		t.Errorf("expected [50, 25000], got %v", args)
+	}
+}
+
+func TestBuildQuery_SmallOffsetNoDeferred(t *testing.T) {
+	// OFFSETが閾値未満の場合、通常のクエリのままであることを確認
+	p := QueryParams{Page: 10, PerPage: 50, Sort: "id", Order: "asc"}
+	query, _ := BuildQuery(p)
+	if strings.Contains(query, "INNER JOIN") {
+		t.Errorf("expected simple query for small offset, got %s", query)
+	}
+}
+
+func TestBuildCountQuery_NoFilters(t *testing.T) {
+	p := QueryParams{Page: 1, PerPage: 50}
+	query, args := BuildCountQuery(p)
+	if len(args) != 0 {
+		t.Errorf("expected 0 args, got %d", len(args))
+	}
+	if query != "SELECT COUNT(*) FROM orders" {
+		t.Errorf("unexpected query: %s", query)
+	}
+}
+
+func TestBuildCountQuery_WithFilters(t *testing.T) {
+	p := QueryParams{Page: 1, PerPage: 50, Status: "納品完了"}
+	query, args := BuildCountQuery(p)
+	if len(args) != 1 {
+		t.Errorf("expected 1 arg, got %d", len(args))
+	}
+	if !strings.Contains(query, "WHERE status = ?") {
+		t.Errorf("expected WHERE status = ?, got %s", query)
+	}
+}
+
+func TestBuildOrderTree(t *testing.T) {
+	orders := []Order{
+		{
+			ID: 1, OrderNumber: "ORD-001", CustomerCode: "C001", CustomerName: "顧客A",
+			ProductCode: "P001", ProductName: "商品A", Quantity: 2, TotalAmount: 3000, Status: "受注確認",
+		},
+		{
+			ID: 2, OrderNumber: "ORD-002", CustomerCode: "C001", CustomerName: "顧客A",
+			ProductCode: "P001", ProductName: "商品A", Quantity: 3, TotalAmount: 4500, Status: "出荷済み",
+		},
+		{
+			ID: 3, OrderNumber: "ORD-003", CustomerCode: "C001", CustomerName: "顧客A",
+			ProductCode: "P002", ProductName: "商品B", Quantity: 5, TotalAmount: 8000, Status: "受注確認",
+		},
+	}
+
+	tree := BuildOrderTree(orders)
+	if len(tree) != 1 {
+		t.Fatalf("expected 1 customer node, got %d", len(tree))
+	}
+	customer := tree[0]
+	if customer.ID != "customer:C001" {
+		t.Errorf("unexpected customer id: %s", customer.ID)
+	}
+	if customer.Summary.OrderCount != 3 {
+		t.Errorf("expected customer order count 3, got %d", customer.Summary.OrderCount)
+	}
+	if customer.Summary.Quantity != 10 {
+		t.Errorf("expected quantity 10, got %d", customer.Summary.Quantity)
+	}
+	if len(customer.Children) != 2 {
+		t.Fatalf("expected 2 product nodes, got %d", len(customer.Children))
+	}
+	if len(customer.Children[0].Children) != 2 {
+		t.Errorf("expected first product to have 2 order children, got %d", len(customer.Children[0].Children))
+	}
+	if customer.Children[0].Children[0].Order == nil {
+		t.Fatal("expected order leaf to include order payload")
+	}
+	if customer.Children[0].Children[0].Order.OrderNumber != "ORD-001" {
+		t.Errorf("unexpected order number: %s", customer.Children[0].Children[0].Order.OrderNumber)
+	}
+}
+
+// ページ境界の安定性を担保するため、ソート列がidでないときは同方向のidを
+// 第2キーに入れる。入れないと同値行の並びがLIMIT/OFFSET間で不定になり、
+// ページ移動時に行の重複や欠落が起きる。
+func TestBuildQuery_AddsIDTiebreakerWhenSortingByNonIDColumn(t *testing.T) {
+	p := QueryParams{Page: 1, PerPage: 50, Sort: "order_date", Order: "desc"}
+	query, _ := BuildQuery(p)
+	if !strings.Contains(query, "ORDER BY order_date DESC, id DESC") {
+		t.Errorf("expected ORDER BY order_date DESC, id DESC, got %s", query)
+	}
+}
+
+func TestBuildQuery_OmitsTiebreakerWhenSortingByID(t *testing.T) {
+	p := QueryParams{Page: 1, PerPage: 50, Sort: "id", Order: "asc"}
+	query, _ := BuildQuery(p)
+	if strings.Contains(query, "id ASC, id ASC") {
+		t.Errorf("did not expect duplicated id key, got %s", query)
+	}
+	if !strings.Contains(query, "ORDER BY id ASC LIMIT") {
+		t.Errorf("expected ORDER BY id ASC LIMIT, got %s", query)
+	}
+}
+
+func TestBuildQuery_DeferredJoinAddsTiebreakerToBothClauses(t *testing.T) {
+	// offset >= offsetThreshold で deferred join 経路に入る
+	p := QueryParams{Page: 501, PerPage: 20, Sort: "status", Order: "asc"}
+	query, _ := BuildQuery(p)
+	if !strings.Contains(query, "ORDER BY status ASC, id ASC LIMIT ? OFFSET ?") {
+		t.Errorf("expected tiebreaker in inner subquery, got %s", query)
+	}
+	if !strings.Contains(query, "ORDER BY o.status ASC, o.id ASC") {
+		t.Errorf("expected tiebreaker in outer clause, got %s", query)
+	}
+}
+
+func TestBuildQuery_DeferredJoinOmitsTiebreakerWhenSortingByID(t *testing.T) {
+	p := QueryParams{Page: 501, PerPage: 20, Sort: "id", Order: "desc"}
+	query, _ := BuildQuery(p)
+	if strings.Contains(query, "id DESC, id DESC") {
+		t.Errorf("did not expect duplicated id key, got %s", query)
+	}
+	if strings.Contains(query, "o.id DESC, o.id DESC") {
+		t.Errorf("did not expect duplicated aliased id key, got %s", query)
+	}
+}
+
+// orderColumns と ScanTargets は同じ定義から導出されるので、i番目の列名に
+// 対応する構造体フィールドのアドレスが i番目のScan先と一致する。
+// 片方だけを編集できてしまうと rows.Scan が別フィールドへ書き込むため、
+// このテストがその乖離を検出する。
+func TestScanTargetsMatchOrderColumnsByJSONTag(t *testing.T) {
+	o := &Order{}
+	targets := o.ScanTargets()
+	if len(targets) != len(orderColumns) {
+		t.Fatalf("len mismatch: orderColumns=%d ScanTargets=%d", len(orderColumns), len(targets))
+	}
+
+	v := reflect.ValueOf(o).Elem()
+	typ := v.Type()
+	byTag := make(map[string]any, typ.NumField())
+	for i := 0; i < typ.NumField(); i++ {
+		tag := strings.Split(typ.Field(i).Tag.Get("json"), ",")[0]
+		if tag == "" || tag == "-" {
+			continue
+		}
+		byTag[tag] = v.Field(i).Addr().Interface()
+	}
+
+	for i, col := range orderColumns {
+		want, ok := byTag[col]
+		if !ok {
+			t.Errorf("column %q has no struct field with a matching json tag", col)
+			continue
+		}
+		if targets[i] != want {
+			t.Errorf("column %q (index %d): ScanTargets points at a different field", col, i)
+		}
+	}
+}

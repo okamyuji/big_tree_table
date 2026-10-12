@@ -1,0 +1,60 @@
+x-db-env: &db-env
+  DB_HOST: mysql
+  DB_PORT: "3306"
+  DB_USER: bigtable
+  DB_PASS: ${DB_PASS:?}
+  DB_NAME: bigtable
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: bigtreetable-mysql
+    environment:
+      MYSQL_RANDOM_ROOT_PASSWORD: "yes"
+      MYSQL_DATABASE: bigtable
+      MYSQL_USER: bigtable
+      MYSQL_PASSWORD: ${DB_PASS:?}
+      MYSQL_CHARACTER_SET_SERVER: utf8mb4
+      MYSQL_COLLATION_SERVER: utf8mb4_unicode_ci
+    ports:
+      - "127.0.0.1:3307:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      # mysqladmin ping exits 0 whenever the server answers, even on "Access denied", so no credentials are needed.
+      # TCP, not the socket: the image's init-time temporary server answers on the socket only.
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  seed:
+    build: ./backend
+    command: ["./seeder"]
+    environment:
+      <<: *db-env
+      SEED_RESET: ${SEED_RESET:-}
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  backend:
+    build: ./backend
+    container_name: bigtreetable-backend
+    environment: *db-env
+    ports:
+      - "127.0.0.1:8080:8080"
+    depends_on:
+      seed:
+        condition: service_completed_successfully
+
+  frontend:
+    build: ./frontend
+    container_name: bigtreetable-frontend
+    ports:
+      - "127.0.0.1:3000:8080"
+    depends_on:
+      - backend
+
+volumes:
+  mysql-data:

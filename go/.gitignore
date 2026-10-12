@@ -1,0 +1,7 @@
+node_modules/
+dist/
+.vite/
+*.local
+.env
+backend/server
+frontend/e2e/*.png

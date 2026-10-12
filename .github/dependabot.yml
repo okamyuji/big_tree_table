@@ -1,7 +1,7 @@
 version: 2
 updates:
 - package-ecosystem: bundler
-  directory: "/"
+  directory: "/rails"
   schedule:
     interval: weekly
   open-pull-requests-limit: 10
@@ -17,7 +17,7 @@ updates:
       patterns:
         - "*"
 - package-ecosystem: npm
-  directory: "/frontend"
+  directory: "/rails/frontend"
   schedule:
     interval: weekly
   open-pull-requests-limit: 10
@@ -38,6 +38,41 @@ updates:
     - dependency-name: vitest
   groups:
     npm:
+      patterns:
+        - "*"
+- package-ecosystem: npm
+  directory: "/go/frontend"
+  schedule:
+    interval: weekly
+  open-pull-requests-limit: 10
+  # pnpm installs only versions at least 7 days old (minimumReleaseAge); cooldown keeps version-update PRs within that.
+  cooldown:
+    default-days: 7
+  # typescript-eslint 8.71 requires typescript <6.1.0; TypeScript 7 breaks lint.
+  # Remove when typescript-eslint's peerDependencies allow the next TypeScript.
+  ignore:
+    - dependency-name: typescript
+      versions: [">=6.1.0"]
+    # vite-plus, vite (the vite-plus-core alias) and vitest must move together, but
+    # Dependabot bumps them one at a time. Update them by hand with `pnpm exec vp migrate`.
+    # Security alerts still arrive; ignore only affects Dependabot pull requests.
+    # https://viteplus.dev/guide/upgrade-project
+    - dependency-name: vite-plus
+    - dependency-name: vite
+    - dependency-name: vitest
+  groups:
+    go-frontend-npm:
+      patterns:
+        - "*"
+- package-ecosystem: gomod
+  directory: "/go/backend"
+  schedule:
+    interval: weekly
+  open-pull-requests-limit: 10
+  cooldown:
+    default-days: 7
+  groups:
+    gomod:
       patterns:
         - "*"
 - package-ecosystem: github-actions

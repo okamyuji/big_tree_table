@@ -36,6 +36,7 @@ jobs:
       security-scan: false
       run-tests: false
       dependabot-recreate: true
+      working-directory: rails
 
   # Kept as a repo-specific job (not replaced by rails-ci.yml@v1):
   # the reusable test-mysql job runs MySQL with MYSQL_ALLOW_EMPTY_PASSWORD
@@ -80,6 +81,7 @@ jobs:
         uses: ruby/setup-ruby@v1
         with:
           bundler-cache: true     # cache + install gems
+          working-directory: rails
 
       - name: Set up Node (for assets:precompile sanity)
         uses: actions/setup-node@v7
@@ -97,9 +99,11 @@ jobs:
           echo "mysql never came up"; exit 1
 
       - name: Prepare database
+        working-directory: rails
         run: bin/rails db:create db:schema:load
 
       - name: Run unified quality gate (rubocop · srb tc · brakeman · audit · tests · build)
+        working-directory: rails
         run: bin/quality
 
   frontend:
@@ -107,7 +111,23 @@ jobs:
     uses: okamyuji/reusable-workflows/.github/workflows/node-ci.yml@v1
     with:
       node-version: "24"
-      working-directory: frontend
+      working-directory: rails/frontend
+      lint-command: run lint
+      typecheck-command: run typecheck
+      test-command: run test
+
+  go-backend:
+    name: go backend (vet · build · test)
+    uses: okamyuji/reusable-workflows/.github/workflows/go-ci.yml@v1
+    with:
+      working-directory: go/backend
+
+  go-frontend:
+    name: go frontend (typecheck · lint · vitest)
+    uses: okamyuji/reusable-workflows/.github/workflows/node-ci.yml@v1
+    with:
+      node-version: "24"
+      working-directory: go/frontend
       lint-command: run lint
       typecheck-command: run typecheck
       test-command: run test
