@@ -22,7 +22,8 @@ services:
       - mysql-data:/var/lib/mysql
     healthcheck:
       # mysqladmin ping exits 0 whenever the server answers, even on "Access denied", so no credentials are needed.
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      # TCP, not the socket: the image's init-time temporary server answers on the socket only.
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1"]
       interval: 5s
       timeout: 5s
       retries: 10

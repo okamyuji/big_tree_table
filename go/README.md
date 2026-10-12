@@ -32,7 +32,7 @@
 ```bash
 [ -f .env ] || (umask 077; echo "DB_PASS=$(openssl rand -hex 16)" > .env)
 set -a; . ./.env; set +a
-docker compose up -d mysql
+docker compose up -d --wait mysql
 ```
 
 MySQLのデータは、初回起動時の`DB_PASS`で初期化されます。`.env`を消したり値を変えたりしたときは、`docker compose down -v`でボリュームを作り直してください。
