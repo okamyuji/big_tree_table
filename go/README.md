@@ -30,7 +30,7 @@
 この節のコマンドは、どれも`go/`ディレクトリを起点にしています。Docker Composeは、MySQLのアプリ用ユーザー`bigtable`のパスワードを環境変数`DB_PASS`から読み、未設定なら起動前にエラーで止まります。初回は`.env`にランダムな値を書き、その値をシェルに読み込んでからMySQLを起動してください。`.env`はGitの管理対象外で、composeも自動で読み込みます。既存のローカルMySQLと衝突しないよう、ホスト側は `3307` を使います。
 
 ```bash
-[ -f .env ] || echo "DB_PASS=$(openssl rand -hex 16)" > .env
+[ -f .env ] || (umask 077; echo "DB_PASS=$(openssl rand -hex 16)" > .env)
 set -a; . ./.env; set +a
 docker compose up -d mysql
 ```
@@ -51,7 +51,7 @@ MySQLのデータは、初回起動時の`DB_PASS`で初期化されます。`.e
 (cd backend && DB_HOST=127.0.0.1 DB_PORT=3307 DB_USER=bigtable go run main.go)
 ```
 
-フロントエンドは、別のターミナルで起動します。そのターミナルでも`go/`に移り、`set -a; . ./.env; set +a`を実行してから続けてください。
+フロントエンドは、別のターミナルで`go/`に移ってから起動します。フロントエンドは`DB_PASS`を使わないので、`.env`の読み込みは要りません。
 
 ```bash
 (cd frontend && vp dev)
@@ -64,7 +64,7 @@ MySQLのデータは、初回起動時の`DB_PASS`で初期化されます。`.e
 すべてのサービスをDockerで起動することもできます。`DB_PASS`は、前の節と同じく`.env`から読み込まれます。
 
 ```bash
-[ -f .env ] || echo "DB_PASS=$(openssl rand -hex 16)" > .env
+[ -f .env ] || (umask 077; echo "DB_PASS=$(openssl rand -hex 16)" > .env)
 docker compose up -d
 ```
 
