@@ -70,9 +70,27 @@ describe("useVirtualScroll", () => {
     });
     rerender({ itemCount: 10, itemHeight: 40, containerHeight: 400, overscan: 5 });
 
-    // scrollTop=3200 gives startIndex=80, clamped to the last item (9):
-    // start = max(0, 9-5) = 4, end = min(10, 9+10+5) = 10
-    expect(result.current.visibleRange.start).toBe(4);
+    // 10 items fit in the 400px container, so the furthest scroll is 0:
+    // start = 0, end = min(10, 0+10+5) = 10
+    expect(result.current.visibleRange.start).toBe(0);
     expect(result.current.visibleRange.end).toBe(10);
+  });
+
+  it("clamps to the last full viewport when the shrunk list still overflows", () => {
+    const { result, rerender } = renderHook((props) => useVirtualScroll(props), {
+      initialProps: { itemCount: 100, itemHeight: 40, containerHeight: 400, overscan: 5 },
+    });
+
+    act(() => {
+      result.current.onScroll({
+        currentTarget: { scrollTop: 3200 },
+      } as unknown as React.UIEvent<HTMLDivElement>);
+    });
+    rerender({ itemCount: 30, itemHeight: 40, containerHeight: 400, overscan: 5 });
+
+    // furthest scroll = 30*40 - 400 = 800, so startIndex = 20:
+    // start = max(0, 20-5) = 15, end = min(30, 20+10+5) = 30
+    expect(result.current.visibleRange.start).toBe(15);
+    expect(result.current.visibleRange.end).toBe(30);
   });
 });

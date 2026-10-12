@@ -25,8 +25,10 @@ export function useVirtualScroll({
       return { start: 0, end: 0 };
     }
 
-    // scrollTop can outlive a shrinking list (e.g. collapse all) until the next scroll event.
-    const startIndex = Math.min(Math.floor(scrollTop / itemHeight), itemCount - 1);
+    // scrollTop can outlive a shrinking list (e.g. collapse all) until the next scroll event,
+    // so clamp it to the furthest position the browser itself allows.
+    const maxScrollTop = Math.max(0, itemCount * itemHeight - containerHeight);
+    const startIndex = Math.floor(Math.min(scrollTop, maxScrollTop) / itemHeight);
     const visibleCount = Math.ceil(containerHeight / itemHeight);
 
     const start = Math.max(0, startIndex - overscan);
