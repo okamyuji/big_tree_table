@@ -22,7 +22,12 @@ const tree: OrderTreeNode[] = [
             kind: "order",
             depth: 2,
             label: "ORD-001",
-            summary: { order_count: 1, quantity: 2, total_amount: "3000.0", statuses: ["受注確認"] },
+            summary: {
+              order_count: 1,
+              quantity: 2,
+              total_amount: "3000.0",
+              statuses: ["受注確認"],
+            },
             children: [],
           },
         ],

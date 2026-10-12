@@ -42,7 +42,12 @@ const mockTree = [
               created_at: "2024-01-01T00:00:00Z",
               updated_at: "2024-01-01T00:00:00Z",
             },
-            summary: { order_count: 1, quantity: 10, total_amount: "10000.0", statuses: ["受注確認"] },
+            summary: {
+              order_count: 1,
+              quantity: 10,
+              total_amount: "10000.0",
+              statuses: ["受注確認"],
+            },
             children: [],
           },
         ],
