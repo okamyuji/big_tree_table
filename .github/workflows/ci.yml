@@ -48,9 +48,6 @@ jobs:
   quality:
     name: rubocop · sorbet · brakeman · audit · tests · build
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: rails
 
     services:
       mysql:
@@ -102,9 +99,11 @@ jobs:
           echo "mysql never came up"; exit 1
 
       - name: Prepare database
+        working-directory: rails
         run: bin/rails db:create db:schema:load
 
       - name: Run unified quality gate (rubocop · srb tc · brakeman · audit · tests · build)
+        working-directory: rails
         run: bin/quality
 
   frontend:
