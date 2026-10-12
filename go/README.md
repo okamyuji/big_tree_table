@@ -27,24 +27,27 @@
 
 ## 起動方法
 
-この節のコマンドは、どれも`go/`ディレクトリを起点にしています。まずMySQLをDocker Composeで起動してください。既存のローカルMySQLと衝突しないよう、ホスト側は `3307` を使います。
+この節のコマンドは、どれも`go/`ディレクトリを起点にしています。Docker Composeは、MySQLのアプリ用ユーザー`bigtable`のパスワードを環境変数`DB_PASS`から読み、未設定なら起動前にエラーで止まります。まず値を作ってからMySQLを起動し、以降のコマンドも同じシェルで実行してください。既存のローカルMySQLと衝突しないよう、ホスト側は `3307` を使います。
 
 ```bash
+export DB_PASS="$(openssl rand -hex 16)"
 docker compose up -d mysql
 ```
+
+MySQLのデータは、初回起動時の`DB_PASS`で初期化されます。値を変えたときは、`docker compose down -v`でボリュームを作り直してください。
 
 初回は100万件のダミーデータを投入します。
 
 ```bash
 cd backend
-DB_HOST=127.0.0.1 DB_PORT=3307 go run seed/seed.go
+DB_HOST=127.0.0.1 DB_PORT=3307 DB_USER=bigtable go run seed/seed.go
 ```
 
 バックエンドを起動します。
 
 ```bash
 cd backend
-DB_HOST=127.0.0.1 DB_PORT=3307 go run main.go
+DB_HOST=127.0.0.1 DB_PORT=3307 DB_USER=bigtable go run main.go
 ```
 
 フロントエンドを起動します。
@@ -58,13 +61,14 @@ vp dev
 
 ## Docker Compose
 
-すべてのサービスをDockerで起動することもできます。
+すべてのサービスをDockerで起動することもできます。この場合も、事前に`DB_PASS`を設定しておきます。
 
 ```bash
+export DB_PASS="$(openssl rand -hex 16)"
 docker compose up -d
 ```
 
-Docker Composeで起動した場合、フロントエンドは <http://localhost:3000> で配信されます。
+Docker Composeで起動した場合、フロントエンドの配信先は <http://localhost:3000> です。composeは、どのポートも`127.0.0.1`に限定して公開します。バックエンドとNginxのコンテナを動かすのは、rootではない専用のユーザーです。
 
 ## ポート
 
@@ -72,7 +76,7 @@ Docker Composeで起動した場合、フロントエンドは <http://localhost
 | --- | --- | --- |
 | MySQL | 3307 -> 3306 | ローカル開発用DB |
 | Backend | 8080 | APIサーバー |
-| Frontend Docker | 3000 | Nginx配信 |
+| Frontend Docker | 3000 -> 8080 | Nginx配信 |
 | Frontend local | 5173 | Vite開発サーバー |
 
 ## データ構造

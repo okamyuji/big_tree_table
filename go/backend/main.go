@@ -7,7 +7,6 @@ import (
 
 	"bigtable-backend/db"
 	"bigtable-backend/handler"
-	"bigtable-backend/middleware"
 	"bigtable-backend/repository"
 	"bigtable-backend/service"
 )
@@ -26,14 +25,12 @@ func main() {
 	mux.HandleFunc("/api/orders", handler.OrdersHandler(svc))
 	mux.HandleFunc("/api/order-tree", handler.OrderTreeHandler(svc))
 
-	wrapped := middleware.CORS(mux)
-
 	// Slowloris DoS 対策のためタイムアウトを明示的に設定する。
 	// http.ListenAndServe をそのまま使うと各タイムアウトが 0 (= 無制限) となり、
 	// ヘッダ／ボディを極端に遅く送る攻撃でハンドラ枠を簡単に枯渇させられる。
 	srv := &http.Server{
 		Addr:              ":8080",
-		Handler:           wrapped,
+		Handler:           mux,
 		ReadHeaderTimeout: 10 * time.Second,
 		ReadTimeout:       30 * time.Second,
 		WriteTimeout:      30 * time.Second,

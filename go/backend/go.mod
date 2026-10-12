@@ -1,6 +1,6 @@
 module bigtable-backend
 
-go 1.24.0
+go 1.27.2
 
 require github.com/go-sql-driver/mysql v1.9.3
 

@@ -3,16 +3,19 @@ services:
     image: mysql:8.0
     container_name: bigtreetable-mysql
     environment:
-      MYSQL_ROOT_PASSWORD: rootpass
+      MYSQL_RANDOM_ROOT_PASSWORD: "yes"
       MYSQL_DATABASE: bigtable
+      MYSQL_USER: bigtable
+      MYSQL_PASSWORD: ${DB_PASS:?}
       MYSQL_CHARACTER_SET_SERVER: utf8mb4
       MYSQL_COLLATION_SERVER: utf8mb4_unicode_ci
     ports:
-      - "3307:3306"
+      - "127.0.0.1:3307:3306"
     volumes:
       - mysql-data:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-prootpass"]
+      # mysqladmin ping exits 0 whenever the server answers, even on "Access denied", so no credentials are needed.
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -23,11 +26,11 @@ services:
     environment:
       DB_HOST: mysql
       DB_PORT: "3306"
-      DB_USER: root
-      DB_PASS: rootpass
+      DB_USER: bigtable
+      DB_PASS: ${DB_PASS:?}
       DB_NAME: bigtable
     ports:
-      - "8080:8080"
+      - "127.0.0.1:8080:8080"
     depends_on:
       mysql:
         condition: service_healthy
@@ -36,7 +39,7 @@ services:
     build: ./frontend
     container_name: bigtreetable-frontend
     ports:
-      - "3000:80"
+      - "127.0.0.1:3000:8080"
     depends_on:
       - backend
 
