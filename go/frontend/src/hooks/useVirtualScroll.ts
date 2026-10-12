@@ -25,7 +25,8 @@ export function useVirtualScroll({
       return { start: 0, end: 0 };
     }
 
-    const startIndex = Math.floor(scrollTop / itemHeight);
+    // scrollTop can outlive a shrinking list (e.g. collapse all) until the next scroll event.
+    const startIndex = Math.min(Math.floor(scrollTop / itemHeight), itemCount - 1);
     const visibleCount = Math.ceil(containerHeight / itemHeight);
 
     const start = Math.max(0, startIndex - overscan);

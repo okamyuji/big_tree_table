@@ -9,7 +9,7 @@ export interface TreeColumn {
 export const TREE_COLUMNS: TreeColumn[] = [
   {
     key: "label",
-    label: "階層 / 注文番号",
+    label: "階層（注文番号順）",
     width: "260px",
     sortable: true,
     sortKey: "order_number",

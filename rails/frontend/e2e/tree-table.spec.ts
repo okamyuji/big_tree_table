@@ -15,7 +15,7 @@ async function waitForTreeTable(page: Page) {
   expect(response.ok()).toBeTruthy();
 
   await expect(page.getByRole("heading", { name: "受注管理ツリーテーブル" })).toBeVisible();
-  await expect(page.getByRole("columnheader", { name: "階層 / 注文番号" })).toBeVisible();
+  await expect(page.getByRole("columnheader", { name: "階層（注文番号順）" })).toBeVisible();
   await expect(page.locator('[role="row"][aria-rowindex]').first()).toBeVisible();
 
   return {
