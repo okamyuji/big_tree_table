@@ -1,8 +1,8 @@
 # BigTreeTable (Ruby on Rails ポート版)
 
-このリポジトリは、100万件の受発注データを顧客、商品、注文の階層で表示するTreeTableデモアプリケーションを、Ruby on Railsへ移植したものです。
+このディレクトリには、100万件の受発注データを顧客、商品、注文の階層で表示するTreeTableデモアプリケーションを、Ruby on Railsへ移植した実装が入っています。
 
-移植元はオリジナルの[BigTreeTable](https://github.com/okamyuji/BigTreeTable)（Go + React）で、移植先はRails 8.1 + ActiveRecordです。バックエンドはMySQL上の100万件のデータをソート、フィルター、ページネーションし、TreeTable専用APIで`customer -> product -> order`の階層レスポンスを返します。フロントエンドはReactとTypeScriptを流用し、展開状態を反映した可視ノードだけを独自の仮想スクロールへ渡して描画します。
+移植元は、同じリポジトリの[`go/`](../go/)にあるGo + React版で、移植先はRails 8.1 + ActiveRecordです。バックエンドはMySQL上の100万件のデータをソート、フィルター、ページネーションし、TreeTable専用APIで`customer -> product -> order`の階層レスポンスを返します。フロントエンドはReactとTypeScriptを流用し、展開状態を反映した可視ノードだけを独自の仮想スクロールへ渡して描画します。
 
 ## 主な機能
 
@@ -12,7 +12,7 @@
 - サーバーサイドのソート、フィルター、ページネーション
 - 固定行高の独自仮想スクロール
 - ActiveRecordとArelによるdeferred join（`offset >= 10,000`で自動的に切り替える）
-- Sorbetの静的型検査、RuboCop、minitest、SimpleCovの80%下限
+- Sorbetによる静的な型チェック、RuboCop、minitest、SimpleCovの80%下限
 - pre-commitとGitHub ActionsでのGitleaksによるsecret scan
 
 ## 技術構成
@@ -29,6 +29,8 @@
 | Security scan | Gitleaks、pre-commit、GitHub Actions、Brakeman、bundler-audit |
 
 ## 起動方法
+
+この節のコマンドは、`rails/`ディレクトリを起点に実行します。
 
 ### 1. MySQLをDockerで起動
 
@@ -282,14 +284,14 @@ ORDER BY `orders`.`order_date` DESC, `orders`.`id` DESC
 
 ## テスト
 
-バックエンドはMinitestで検査し、SimpleCovで80%の下限を課します。
+バックエンドはMinitestでテストし、SimpleCovでカバレッジ80%の下限を課します。
 
 ```bash
 bin/rails test
 # Coverage report generated for Minitest to coverage/
 ```
 
-フロントエンドは次のコマンドで検査します。
+フロントエンドの型チェック、整形、lint、テストは、次のコマンドで実行します。
 
 ```bash
 cd frontend
@@ -324,13 +326,13 @@ bin/quality
 
 ## Gitleaks
 
-pre-commitのhookは次のコマンドでインストールします。
+pre-commitの設定はリポジトリのルートにあり、`go/`と共有しています。pre-commitのhookは、リポジトリのルートで次のコマンドを実行してインストールします。
 
 ```bash
 pre-commit install
 ```
 
-手動で実行するときは次のコマンドを使います。
+手動で実行するときは、リポジトリのルートで次のコマンドを使います。
 
 ```bash
 pre-commit run --all-files
@@ -338,16 +340,12 @@ gitleaks git --redact --no-banner --verbose
 gitleaks dir . --redact --no-banner --verbose
 ```
 
-GitHub Actionsも、push、pull request、手動実行のたびにGitleaksを実行します（`.github/workflows/ci.yml`）。
+GitHub Actionsの[ci.yml](../.github/workflows/ci.yml)も、push、pull request、手動実行のたびにGitleaksと`bin/quality`を実行します。
 
 ## ディレクトリ構成
 
 ```text
-big_tree_table/
-├── .github/
-│   └── workflows/
-│       └── ci.yml              # gitleaks + bin/quality
-├── .pre-commit-config.yaml     # pre-commit + gitleaks
+rails/
 ├── app/
 │   ├── controllers/
 │   │   └── api/

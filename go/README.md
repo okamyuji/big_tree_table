@@ -2,7 +2,7 @@
 
 100万件の受発注データを、顧客、商品、注文の階層で表示するTreeTableデモアプリケーションです。
 
-このリポジトリは、Reactの大規模テーブルと仮想スクロールを説明するための[BigTableアプリ](https://github.com/okamyuji/BigTable)を、折りたたみ可能なTreeTable対応版として拡張したものです。バックエンドはMySQL上の100万件データをソート、フィルター、ページネーションし、TreeTable専用APIで `customer -> product -> order` の階層レスポンスを返します。フロントエンドはReactとTypeScriptで構築し、展開状態を反映した可視ノードだけを独自の仮想スクロールへ渡して描画します。
+このディレクトリは、Reactの大規模テーブルと仮想スクロールを説明するための[BigTableアプリ](https://github.com/okamyuji/BigTable)を、折りたたみ可能なTreeTable対応版として拡張したものです。バックエンドはMySQL上の100万件データをソート、フィルター、ページネーションし、TreeTable専用APIで `customer -> product -> order` の階層レスポンスを返します。フロントエンドはReactとTypeScriptで構築し、展開状態を反映した可視ノードだけを独自の仮想スクロールへ渡して描画します。
 
 ## 主な機能
 
@@ -27,7 +27,7 @@
 
 ## 起動方法
 
-MySQLをDocker Composeで起動します。既存のローカルMySQLと衝突しないよう、ホスト側は `3307` を使います。
+この節のコマンドは、どれも`go/`ディレクトリを起点にしています。まずMySQLをDocker Composeで起動してください。既存のローカルMySQLと衝突しないよう、ホスト側は `3307` を使います。
 
 ```bash
 docker compose up -d mysql
@@ -106,7 +106,7 @@ TreeTable用の階層データを取得します。ソート、フィルター�
 | date_from | YYYY-MM-DD | なし | 注文日の開始日 |
 | date_to | YYYY-MM-DD | なし | 注文日の終了日 |
 
-レスポンス例:
+レスポンスの例は次のとおりです。
 
 ```json
 {
@@ -147,14 +147,14 @@ TreeTable用の階層データを取得します。ソート、フィルター�
 
 ## テスト
 
-バックエンド:
+バックエンドのテストは次のコマンドで実行します。
 
 ```bash
 cd backend
 go test ./...
 ```
 
-フロントエンド:
+フロントエンドは、次のコマンドで整形、lint、テスト、型チェック、ビルドを順に実行します。
 
 ```bash
 cd frontend
@@ -183,13 +183,13 @@ E2Eでは以下を確認します。
 
 ## Gitleaks
 
-pre-commit hookをインストールします。
+pre-commitの設定はリポジトリのルートにあり、`rails/`と共有しています。pre-commit hookは、リポジトリのルートでインストールします。
 
 ```bash
 pre-commit install
 ```
 
-手動実行:
+手動で実行するときは、リポジトリのルートで次のコマンドを使います。
 
 ```bash
 pre-commit run --all-files
@@ -197,15 +197,12 @@ gitleaks git --redact --no-banner --verbose
 gitleaks dir . --redact --no-banner --verbose
 ```
 
-GitHub Actionsでもpush、pull request、手動実行時にGitleaksを実行します。
+GitHub Actionsの[ci.yml](../.github/workflows/ci.yml)も、push、pull request、手動実行のたびにGitleaksを実行します。同じワークフローで、`backend/`にはgo vet、go build、go testを、`frontend/`には型チェック、lint、Vitestをかけています。
 
 ## ディレクトリ構成
 
 ```text
-BigTreeTable/
-├── .github/
-│   └── workflows/
-│       └── gitleaks.yml
+go/
 ├── backend/
 │   ├── handler/
 │   ├── model/
