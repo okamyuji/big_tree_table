@@ -1,3 +1,10 @@
+x-db-env: &db-env
+  DB_HOST: mysql
+  DB_PORT: "3306"
+  DB_USER: bigtable
+  DB_PASS: ${DB_PASS:?}
+  DB_NAME: bigtable
+
 services:
   mysql:
     image: mysql:8.0
@@ -20,20 +27,25 @@ services:
       timeout: 5s
       retries: 10
 
-  backend:
+  seed:
     build: ./backend
-    container_name: bigtreetable-backend
+    command: ["./seeder"]
     environment:
-      DB_HOST: mysql
-      DB_PORT: "3306"
-      DB_USER: bigtable
-      DB_PASS: ${DB_PASS:?}
-      DB_NAME: bigtable
-    ports:
-      - "127.0.0.1:8080:8080"
+      <<: *db-env
+      SEED_RESET: ${SEED_RESET:-}
     depends_on:
       mysql:
         condition: service_healthy
+
+  backend:
+    build: ./backend
+    container_name: bigtreetable-backend
+    environment: *db-env
+    ports:
+      - "127.0.0.1:8080:8080"
+    depends_on:
+      seed:
+        condition: service_completed_successfully
 
   frontend:
     build: ./frontend

@@ -22,6 +22,7 @@ func OrdersHandler(svc service.OrderService) http.HandlerFunc {
 
 		resp, err := svc.GetOrders(params)
 		if err != nil {
+			log.Printf("GetOrders failed: %v", err)
 			http.Error(w, "Database error", http.StatusInternalServerError)
 			return
 		}
@@ -42,6 +43,7 @@ func OrderTreeHandler(svc service.OrderService) http.HandlerFunc {
 
 		resp, err := svc.GetOrderTree(params)
 		if err != nil {
+			log.Printf("GetOrderTree failed: %v", err)
 			http.Error(w, "Database error", http.StatusInternalServerError)
 			return
 		}

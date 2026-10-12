@@ -1,12 +1,17 @@
 package db
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"os"
+	"time"
 
 	_ "github.com/go-sql-driver/mysql"
 )
+
+// pingTimeout bounds the startup check: an unreachable host otherwise blocks for the OS TCP timeout (75s on macOS).
+const pingTimeout = 5 * time.Second
 
 func Connect() (*sql.DB, error) {
 	host := getEnv("DB_HOST", "localhost")
@@ -24,7 +29,9 @@ func Connect() (*sql.DB, error) {
 	}
 	db.SetMaxOpenConns(25)
 	db.SetMaxIdleConns(5)
-	return db, db.Ping()
+	ctx, cancel := context.WithTimeout(context.Background(), pingTimeout)
+	defer cancel()
+	return db, db.PingContext(ctx)
 }
 
 func getEnv(key, fallback string) string {

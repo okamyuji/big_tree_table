@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	_ "github.com/go-sql-driver/mysql"
+	"bigtable-backend/db"
 )
 
 const (
@@ -45,35 +45,14 @@ var statuses = []string{"受注確認", "出荷準備中", "出荷済み", "納�
 var orderTypes = []string{"受注", "発注"}
 
 func main() {
-	// パスワードはハードコードしない。未設定時は空文字となり、
-	// 環境に応じて env / .env で必ず設定する運用とする。
-	dsn := fmt.Sprintf(
-		"%s:%s@tcp(%s:%s)/%s?parseTime=true&charset=utf8mb4",
-		getEnv("DB_USER", "root"),
-		os.Getenv("DB_PASS"),
-		getEnv("DB_HOST", "localhost"),
-		getEnv("DB_PORT", "3306"),
-		getEnv("DB_NAME", "bigtable"),
-	)
-	db, err := sql.Open("mysql", dsn)
+	conn, err := db.Connect()
 	if err != nil {
 		log.Fatalf("Failed to connect: %v", err)
 	}
-	defer db.Close()
+	defer conn.Close()
 
-	if err := db.Ping(); err != nil {
-		log.Fatalf("Failed to ping: %v", err)
-	}
-
-	createTable(db)
-	seedData(db)
-}
-
-func getEnv(key, fallback string) string {
-	if value := os.Getenv(key); value != "" {
-		return value
-	}
-	return fallback
+	createTable(conn)
+	seedData(conn)
 }
 
 func createTable(db *sql.DB) {
@@ -109,19 +88,40 @@ CREATE TABLE IF NOT EXISTS orders (
 	log.Println("Table 'orders' ready")
 }
 
+// planSeed decides what to do with rows already in orders. TRUNCATE cannot be
+// rolled back, so a partial table is cleared only when SEED_RESET=1 asks for it.
+func planSeed(count int64, reset bool) (skip, truncate bool, err error) {
+	switch {
+	case count >= totalRows:
+		return true, false, nil
+	case count == 0:
+		return false, false, nil
+	case reset:
+		return false, true, nil
+	default:
+		return false, false, fmt.Errorf("orders already has %d rows (expected 0 or %d); set SEED_RESET=1 to delete them and reseed", count, totalRows)
+	}
+}
+
 func seedData(db *sql.DB) {
 	// Check if data already exists
 	var count int64
-	db.QueryRow("SELECT COUNT(*) FROM orders").Scan(&count)
-	if count >= totalRows {
+	if err := db.QueryRow("SELECT COUNT(*) FROM orders").Scan(&count); err != nil {
+		log.Fatalf("Failed to count existing rows: %v", err)
+	}
+	skip, truncate, err := planSeed(count, os.Getenv("SEED_RESET") == "1")
+	if err != nil {
+		log.Fatal(err)
+	}
+	if skip {
 		log.Printf("Table already has %d rows, skipping seed", count)
 		return
 	}
-
-	// Truncate if partial data
-	if count > 0 {
-		db.Exec("TRUNCATE TABLE orders")
-		log.Println("Truncated existing partial data")
+	if truncate {
+		if _, err := db.Exec("TRUNCATE TABLE orders"); err != nil {
+			log.Fatalf("Failed to truncate orders: %v", err)
+		}
+		log.Printf("Truncated %d existing rows (SEED_RESET=1)", count)
 	}
 
 	rng := rand.New(rand.NewSource(42))

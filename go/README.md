@@ -27,46 +27,48 @@
 
 ## 起動方法
 
-この節のコマンドは、どれも`go/`ディレクトリを起点にしています。Docker Composeは、MySQLのアプリ用ユーザー`bigtable`のパスワードを環境変数`DB_PASS`から読み、未設定なら起動前にエラーで止まります。まず値を作ってからMySQLを起動し、以降のコマンドも同じシェルで実行してください。既存のローカルMySQLと衝突しないよう、ホスト側は `3307` を使います。
+この節のコマンドは、どれも`go/`ディレクトリを起点にしています。Docker Composeは、MySQLのアプリ用ユーザー`bigtable`のパスワードを環境変数`DB_PASS`から読み、未設定なら起動前にエラーで止まります。初回は`.env`にランダムな値を書き、その値をシェルに読み込んでからMySQLを起動してください。`.env`はGitの管理対象外で、composeも自動で読み込みます。既存のローカルMySQLと衝突しないよう、ホスト側は `3307` を使います。
 
 ```bash
-export DB_PASS="$(openssl rand -hex 16)"
+[ -f .env ] || echo "DB_PASS=$(openssl rand -hex 16)" > .env
+set -a; . ./.env; set +a
 docker compose up -d mysql
 ```
 
-MySQLのデータは、初回起動時の`DB_PASS`で初期化されます。値を変えたときは、`docker compose down -v`でボリュームを作り直してください。
+MySQLのデータは、初回起動時の`DB_PASS`で初期化されます。`.env`を消したり値を変えたりしたときは、`docker compose down -v`でボリュームを作り直してください。
 
 初回は100万件のダミーデータを投入します。
 
 ```bash
-cd backend
-DB_HOST=127.0.0.1 DB_PORT=3307 DB_USER=bigtable go run seed/seed.go
+(cd backend && DB_HOST=127.0.0.1 DB_PORT=3307 DB_USER=bigtable go run seed/seed.go)
 ```
+
+途中で止まった投入の残りがあると、シードは行を消さずにエラーで終了します。消して入れ直したい場合は、同じコマンドの先頭に`SEED_RESET=1`を付けてください。
 
 バックエンドを起動します。
 
 ```bash
-cd backend
-DB_HOST=127.0.0.1 DB_PORT=3307 DB_USER=bigtable go run main.go
+(cd backend && DB_HOST=127.0.0.1 DB_PORT=3307 DB_USER=bigtable go run main.go)
 ```
 
-フロントエンドを起動します。
+フロントエンドは、別のターミナルで起動します。そのターミナルでも`go/`に移り、`set -a; . ./.env; set +a`を実行してから続けてください。
 
 ```bash
-cd frontend
-vp dev
+(cd frontend && vp dev)
 ```
 
 ブラウザで <http://localhost:5173> を開きます。
 
 ## Docker Compose
 
-すべてのサービスをDockerで起動することもできます。この場合も、事前に`DB_PASS`を設定しておきます。
+すべてのサービスをDockerで起動することもできます。`DB_PASS`は、前の節と同じく`.env`から読み込まれます。
 
 ```bash
-export DB_PASS="$(openssl rand -hex 16)"
+[ -f .env ] || echo "DB_PASS=$(openssl rand -hex 16)" > .env
 docker compose up -d
 ```
+
+初回の起動では、`seed`サービスが100万件を投入し終えてからバックエンドが起動します。投入済みのときは、シードがすぐに終わるので待ち時間はありません。途中で止まった投入の残りを消して入れ直す方法は、`SEED_RESET=1 docker compose up -d`の実行です。
 
 Docker Composeで起動した場合、フロントエンドの配信先は <http://localhost:3000> です。composeは、どのポートも`127.0.0.1`に限定して公開します。バックエンドとNginxのコンテナを動かすのは、rootではない専用のユーザーです。
 
