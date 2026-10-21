@@ -1,0 +1,9 @@
+# pnpm 10 は package.json の "pnpm" フィールドから minimumReleaseAge と trustPolicy を読まないため、ここに置く。
+# https://pnpm.io/settings
+
+# 公開から7日未満のパッケージを取得しない。サプライチェーン攻撃の版は公開1〜7日以内に
+# 検知・削除されることが多いため。
+minimumReleaseAge: 10080 # 60 * 24 * 7 = 7日（分）
+
+# 先に公開された版より trusted publisher や provenance の信頼の段階が下がった版を拒否する。
+trustPolicy: no-downgrade
