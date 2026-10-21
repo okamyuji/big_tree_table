@@ -1,7 +1,7 @@
 FROM node:24 AS builder
-RUN corepack enable && corepack prepare pnpm@latest --activate
+RUN corepack enable
 WORKDIR /app
-COPY package.json pnpm-lock.yaml ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN pnpm install --frozen-lockfile
 COPY . .
 RUN pnpm exec tsc -b && pnpm exec vp build
