@@ -25,7 +25,7 @@ RUN apt-get update -qq && \
       pkg-config && \
     rm -rf /var/lib/apt/lists /var/cache/apt/archives
 
-COPY Gemfile Gemfile.lock ./
+COPY Gemfile Gemfile.lock .ruby-version ./
 RUN bundle install
 
 COPY . .
