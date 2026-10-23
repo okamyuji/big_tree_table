@@ -36,6 +36,18 @@ peerDependencyRules:
 # 緊急のホットフィックスが必要なときは --minimum-release-age 0 で個別に上書きするが、
 # それは意図的にレビューされた例外として扱う。
 minimumReleaseAge: 10080 # 60 * 24 * 7 = 7日（分）
+# GHSA-p458-7748-mcp3 の修正版。provenance を確かめたうえで版を固定して例外にする。
+minimumReleaseAgeExclude:
+  - vite-plus@1.3.0
+  - "@voidzero-dev/vite-plus-core@1.3.0"
+  - "@voidzero-dev/vite-plus-darwin-arm64@1.3.0"
+  - "@voidzero-dev/vite-plus-darwin-x64@1.3.0"
+  - "@voidzero-dev/vite-plus-linux-arm64-gnu@1.3.0"
+  - "@voidzero-dev/vite-plus-linux-arm64-musl@1.3.0"
+  - "@voidzero-dev/vite-plus-linux-x64-gnu@1.3.0"
+  - "@voidzero-dev/vite-plus-linux-x64-musl@1.3.0"
+  - "@voidzero-dev/vite-plus-win32-arm64-msvc@1.3.0"
+  - "@voidzero-dev/vite-plus-win32-x64-msvc@1.3.0"
 
 # 先に公開された版よりtrusted publisherやprovenanceの信頼の段階が下がった版を拒否し、installを失敗させる。
 # 侵害された可能性のある版の取得を防ぐ。
@@ -64,6 +76,6 @@ verifyStoreIntegrity: true
 # 3つは `pnpm exec vp migrate` でそろえて上げる（Dependabot の対象外）。
 # migrate は minimumReleaseAgeExclude と peerDependencyRules.allowAny を足すので、差分を見て消す。
 catalog:
-  vite: npm:@voidzero-dev/vite-plus-core@1.1.0
-  vitest: 5.0.3
-  vite-plus: 1.1.0
+  vite: npm:@voidzero-dev/vite-plus-core@1.3.0
+  vitest: 5.0.5
+  vite-plus: 1.3.0
