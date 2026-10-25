@@ -36,6 +36,33 @@ peerDependencyRules:
 # 緊急のホットフィックスが必要なときは --minimum-release-age 0 で個別に上書きするが、
 # それは意図的にレビューされた例外として扱う。
 minimumReleaseAge: 10080 # 60 * 24 * 7 = 7日（分）
+minimumReleaseAgeExclude:
+  - node-releases@2.0.60
+  - postcss@8.5.31
+  - tldts-core@7.4.19
+  - tldts@7.4.19
+  - typescript-eslint@8.72.0
+  - undici@8.12.3
+  - '@asamuzakjp/css-color@7.1.9'
+  - '@asamuzakjp/dom-selector@10.0.5'
+  - '@babel/helper-string-parser@7.29.11'
+  - '@babel/parser@7.29.11'
+  - '@babel/types@7.29.11'
+  - '@typescript-eslint/eslint-plugin@8.72.0'
+  - '@typescript-eslint/parser@8.72.0'
+  - '@typescript-eslint/project-service@8.72.0'
+  - '@typescript-eslint/scope-manager@8.72.0'
+  - '@typescript-eslint/tsconfig-utils@8.72.0'
+  - '@typescript-eslint/type-utils@8.72.0'
+  - '@typescript-eslint/types@8.72.0'
+  - '@typescript-eslint/typescript-estree@8.72.0'
+  - '@typescript-eslint/utils@8.72.0'
+  - '@typescript-eslint/visitor-keys@8.72.0'
+  - baseline-browser-mapping@2.11.32
+  - browserslist@4.29.4
+  - caniuse-lite@1.0.30001819
+  - electron-to-chromium@1.5.464
+  - ignore@7.0.14
 
 # 先に公開された版よりtrusted publisherやprovenanceの信頼の段階が下がった版を拒否し、installを失敗させる。
 # 侵害された可能性のある版の取得を防ぐ。
