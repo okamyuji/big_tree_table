@@ -1,5 +1,5 @@
 FROM node:24 AS builder
-RUN corepack enable && corepack prepare pnpm@10.32.1 --activate
+RUN corepack enable
 WORKDIR /app
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN pnpm install --frozen-lockfile
