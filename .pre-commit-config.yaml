@@ -31,7 +31,7 @@ repos:
   - repo: local
     hooks:
       # NOTE on `bash -c 'cd rails/frontend && ...'`: with corepack, pnpm's
-      # `packageManager` pin (pnpm@10.32.1) is resolved from the cwd's
+      # `packageManager` pin is resolved from the cwd's
       # nearest package.json. `pnpm -C rails/frontend ...` runs from the repo
       # root, where corepack doesn't see the pin and falls back to the
       # globally installed pnpm, breaking on version mismatch. Changing
