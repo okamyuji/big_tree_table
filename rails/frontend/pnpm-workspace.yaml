@@ -21,6 +21,7 @@ overrides:
   "source-map-js@<1.2.2": "1.2.2"
   vite@*: "catalog:"
   vitest@*: "catalog:"
+  'minimatch@>=10.0.0 <11.0.1': ^11.0.3
 
 # vite を Vite+ に差し替えている都合で、vite の peer を要求するパッケージからは
 # バージョンが vite-plus-core の版（1.x）に見える。strictPeerDependencies を有効にしたままにするため、
@@ -63,6 +64,8 @@ minimumReleaseAgeExclude:
   - caniuse-lite@1.0.30001819
   - electron-to-chromium@1.5.464
   - ignore@7.0.14
+  - minimatch@11.0.3
+  - '@isaacs/nonrecursive-glob-match@1.0.3'
 
 # 先に公開された版よりtrusted publisherやprovenanceの信頼の段階が下がった版を拒否し、installを失敗させる。
 # 侵害された可能性のある版の取得を防ぐ。
