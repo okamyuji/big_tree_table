@@ -165,7 +165,7 @@ go test ./...
 ```bash
 cd frontend
 vp fmt
-eslint .
+vp lint .
 vp test -- --run
 tsc -b
 vp build

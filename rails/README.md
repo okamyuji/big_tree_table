@@ -297,7 +297,7 @@ bin/rails test
 cd frontend
 pnpm exec tsc -b      # 型検査
 pnpm exec vp fmt      # 整形
-pnpm exec eslint .    # lint
+pnpm exec vp lint .   # lint
 pnpm test             # Vitest
 ```
 

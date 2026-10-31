@@ -25,11 +25,7 @@ updates:
   # pnpm installs only versions at least 7 days old (minimumReleaseAge); cooldown keeps version-update PRs within that.
   cooldown:
     default-days: 7
-  # typescript-eslint 8.71 requires typescript <6.1.0; TypeScript 7 breaks lint.
-  # Remove when typescript-eslint's peerDependencies allow the next TypeScript.
   ignore:
-    - dependency-name: typescript
-      versions: [">=6.1.0"]
     # vite-plus, vite (the vite-plus-core alias) and vitest must move together, but
     # Dependabot bumps them one at a time. Update them by hand with `pnpm exec vp migrate`.
     # Security alerts still arrive; ignore only affects Dependabot pull requests.
@@ -50,11 +46,7 @@ updates:
   # pnpm installs only versions at least 7 days old (minimumReleaseAge); cooldown keeps version-update PRs within that.
   cooldown:
     default-days: 7
-  # typescript-eslint 8.71 requires typescript <6.1.0; TypeScript 7 breaks lint.
-  # Remove when typescript-eslint's peerDependencies allow the next TypeScript.
   ignore:
-    - dependency-name: typescript
-      versions: [">=6.1.0"]
     # vite-plus, vite (the vite-plus-core alias) and vitest must move together, but
     # Dependabot bumps them one at a time. Update them by hand with `pnpm exec vp migrate`.
     # Security alerts still arrive; ignore only affects Dependabot pull requests.
