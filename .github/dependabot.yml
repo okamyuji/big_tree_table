@@ -5,10 +5,10 @@ updates:
   schedule:
     interval: weekly
   open-pull-requests-limit: 10
-  # Same 7-day release-age wait as frontend's pnpm minimumReleaseAge.
+  # Same 3-day release-age wait as frontend's pnpm minimumReleaseAge.
   # Security updates are not affected (cooldown applies to version updates only).
   cooldown:
-    default-days: 7
+    default-days: 3
   # One grouped PR per week: concurrent bundler PRs conflict on adjacent
   # Gemfile.lock CHECKSUMS lines, and hand-resolving that conflict is how
   # stale CHECKSUMS reached main (PR #44/#52/#56).
@@ -22,9 +22,9 @@ updates:
     # A locked version younger than the cooldown fails the whole pnpm update; retry daily so updates resume as soon as it ages.
     interval: daily
   open-pull-requests-limit: 10
-  # pnpm installs only versions at least 7 days old (minimumReleaseAge); cooldown keeps version-update PRs within that.
+  # pnpm installs only versions at least 3 days old (minimumReleaseAge); cooldown keeps version-update PRs within that.
   cooldown:
-    default-days: 7
+    default-days: 3
   ignore:
     # vite-plus, vite (the vite-plus-core alias) and vitest must move together, but
     # Dependabot bumps them one at a time. Update them by hand with `pnpm exec vp migrate`.
@@ -43,9 +43,9 @@ updates:
     # A locked version younger than the cooldown fails the whole pnpm update; retry daily so updates resume as soon as it ages.
     interval: daily
   open-pull-requests-limit: 10
-  # pnpm installs only versions at least 7 days old (minimumReleaseAge); cooldown keeps version-update PRs within that.
+  # pnpm installs only versions at least 3 days old (minimumReleaseAge); cooldown keeps version-update PRs within that.
   cooldown:
-    default-days: 7
+    default-days: 3
   ignore:
     # vite-plus, vite (the vite-plus-core alias) and vitest must move together, but
     # Dependabot bumps them one at a time. Update them by hand with `pnpm exec vp migrate`.
@@ -64,7 +64,7 @@ updates:
     interval: weekly
   open-pull-requests-limit: 10
   cooldown:
-    default-days: 7
+    default-days: 3
   groups:
     gomod:
       patterns:
