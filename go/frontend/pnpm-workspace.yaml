@@ -1,14 +1,9 @@
 # pnpm 11 は package.json の "pnpm" フィールドを読まないため、設定はすべてここに置く。
 # https://pnpm.io/settings
 
-# 公開から7日未満のパッケージを取得しない。サプライチェーン攻撃の版は公開1〜7日以内に
+# 公開から3日未満のパッケージを取得しない。サプライチェーン攻撃の版は公開から数時間で
 # 検知・削除されることが多いため。
-minimumReleaseAge: 10080 # 60 * 24 * 7 = 7日（分）
-minimumReleaseAgeExclude:
-  - tldts-core@7.4.19
-  - tldts@7.4.19
-  - '@asamuzakjp/css-color@7.1.9'
-  - '@asamuzakjp/dom-selector@10.0.5'
+minimumReleaseAge: 4320 # 60 * 24 * 3 = 3日（分）
 
 # 先に公開された版より trusted publisher や provenance の信頼の段階が下がった版を拒否する。
 trustPolicy: no-downgrade

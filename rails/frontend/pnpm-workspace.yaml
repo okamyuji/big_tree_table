@@ -31,19 +31,11 @@ peerDependencyRules:
     vite: "1"
 
 # --- サプライチェーン対策 ---
-# 公開から7日未満のパッケージを取得しない。chalk/debug (2024)、lottie-player (2024)、
-# eslint-config-* (2024) のようなサプライチェーン攻撃は公開1〜7日以内に検知・削除
-# されることが多く、1週間待つだけで大半を回避できる。
+# 公開から3日未満のパッケージを取得しない。axios (2026-03)、TanStack (2026-05) のような
+# サプライチェーン攻撃の版は公開から数時間で検知・削除されており、3日待つだけで大半を回避できる。
 # 緊急のホットフィックスが必要なときは --minimum-release-age 0 で個別に上書きするが、
 # それは意図的にレビューされた例外として扱う。
-minimumReleaseAge: 10080 # 60 * 24 * 7 = 7日（分）
-minimumReleaseAgeExclude:
-  - postcss@8.5.31
-  - tldts-core@7.4.19
-  - tldts@7.4.19
-  - undici@8.12.3
-  - '@asamuzakjp/css-color@7.1.9'
-  - '@asamuzakjp/dom-selector@10.0.5'
+minimumReleaseAge: 4320 # 60 * 24 * 3 = 3日（分）
 
 # 先に公開された版よりtrusted publisherやprovenanceの信頼の段階が下がった版を拒否し、installを失敗させる。
 # 侵害された可能性のある版の取得を防ぐ。
