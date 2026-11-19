@@ -19,7 +19,7 @@
 
 | 領域 | 技術 |
 | --- | --- |
-| Backend | Ruby 3.4、Rails 8.1、ActiveRecord、Arel、mysql2 |
+| Backend | Ruby 4.0、Rails 8.1、ActiveRecord、Arel、mysql2 |
 | Database | MySQL 8 |
 | Frontend | React 19、TypeScript、Tailwind CSS v4、Vite+ |
 | Type check | Sorbet (sorbet-static-and-runtime + tapioca) |
