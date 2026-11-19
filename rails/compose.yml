@@ -2,7 +2,7 @@
 #
 #   docker compose up -d            # mysql + backend + frontend
 #   docker compose up -d mysql      # MySQL only (host-port 3306)
-#   docker compose exec backend bin/rails db:create db:migrate db:seed
+#   (backend runs db:prepare on start: a new DB is created, migrated and seeded)
 #
 # Frontend Vite dev server is reachable at http://localhost:5173
 # Rails API is reachable at http://localhost:3000
@@ -44,7 +44,8 @@ services:
     volumes:
       - .:/rails
       - bundle-cache:/usr/local/bundle
-    # 中身のある bundle-cache は image の gem を隠すので、Ruby や Gemfile.lock が変わった後はここで入れ直す
+    # 中身のある bundle-cache は image の gem を隠すので、Ruby や Gemfile.lock が変わった後はここで入れ直す。
+    # db:prepare で、新しい mysql-data でも手作業なしで起動できるようにする
     command: sh -c "(bundle check > /dev/null || bundle install) && bin/rails db:prepare && exec bin/rails server -b 0.0.0.0 -p 3000"
     ports:
       - "127.0.0.1:3000:3000"
