@@ -44,6 +44,8 @@ services:
     volumes:
       - .:/rails
       - bundle-cache:/usr/local/bundle
+    # 中身のある bundle-cache は image の gem を隠すので、Ruby や Gemfile.lock が変わった後はここで入れ直す
+    command: sh -c "(bundle check > /dev/null || bundle install) && bin/rails db:prepare && exec bin/rails server -b 0.0.0.0 -p 3000"
     ports:
       - "127.0.0.1:3000:3000"
     depends_on:
