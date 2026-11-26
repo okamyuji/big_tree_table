@@ -1,0 +1,7 @@
+ok a request without credentials gets the Basic challenge
+ok a wrong password gets 401
+ok the list renders values the way Rails does
+ok LIKE terms match %, _, backslash, quote and ? literally
+ok invalid paging, sort and dates fall back to the defaults
+ok dates filter inclusively, leap day included
+ok the tree sums fractional amounts exactly

@@ -1,0 +1,19 @@
+# Tool pins — flat TOML: every value is a quoted string; no tables, no arrays.
+# `snails sync` discovers this file, and `snails pins check` validates the
+# declaration.
+SPINEL_REV="2669f3fec"
+
+# Core pin — a release version (vX.Y.Z), or a full commit for an edge pin.
+# The vendored snails-core/ must match it.
+SNALS_REV="v1.3.0"
+
+# Build source — "pin" vendors SNALS_REV; "checkout" vendors the core
+# checkout's working tree, so a build compiles it as it stands.
+SNALS_SOURCE="pin"
+
+# App identity — dev database and container names derive from it, never the
+# directory name.
+APP_NAME="snails"
+
+# The schema belongs to ../bench/db; snails migrate must not change it.
+DB_OWNER="external"
