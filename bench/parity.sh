@@ -120,6 +120,8 @@ status_only() { # status_only <label> <path> <curl args...>
     fi
   done
 }
+status_only nul-byte "/api/v1/orders?customer_name=a%00b" "${auth[@]}"
+status_only nul-byte-tree "/api/v1/orders/tree?status=%00" "${auth[@]}"
 status_only no-auth "/api/v1/orders"
 status_only bearer "/api/v1/orders" -H "Authorization: Bearer nope"
 status_only wrong-user "/api/v1/orders" -u "nobody:$API_BASIC_AUTH_PASSWORD"

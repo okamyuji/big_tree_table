@@ -224,3 +224,18 @@ func TestV1OrderPayload_NullDeliveryDateStaysNull(t *testing.T) {
 		t.Errorf("payload = %s, want delivery_date null", b)
 	}
 }
+
+func TestV1Handlers_RejectNulBytes(t *testing.T) {
+	for _, h := range []http.HandlerFunc{V1OrdersHandler(&fakeService{}), V1OrderTreeHandler(&fakeService{})} {
+		rec := httptest.NewRecorder()
+		h.ServeHTTP(rec, httptest.NewRequest("GET", "/api/v1/orders?customer_name=a%00b", nil))
+		if rec.Code != http.StatusBadRequest {
+			t.Errorf("status = %d, want 400", rec.Code)
+		}
+	}
+	rec := httptest.NewRecorder()
+	V1OrdersHandler(&fakeService{}).ServeHTTP(rec, httptest.NewRequest("GET", "/api/v1/orders?unknown=a%00b", nil))
+	if rec.Code != http.StatusOK {
+		t.Errorf("a NUL byte outside the permitted keys: status = %d, want 200", rec.Code)
+	}
+}

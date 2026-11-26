@@ -5,6 +5,10 @@ module Api
     class OrdersController < ActionController::API
       # Snails does not inherit before_action, so the guard is declared here.
       before_action :guard_api
+      before_action :reject_nul_bytes
+
+      # The parameters Rails' list_params permits.
+      PARAM_KEYS = %w[order_type status customer_name product_name date_from date_to sort order page per_page].freeze
 
       def index
         rows, meta = paged_search
@@ -17,6 +21,15 @@ module Api
       end
 
       private
+
+      # PostgreSQL rejects a NUL byte in text, so the API answers 400 up front,
+      # as the Rails version does.
+      def reject_nul_bytes
+        PARAM_KEYS.each do |key|
+          value = params[key]
+          return head(:bad_request) if value.is_a?(String) && value.include?("\0")
+        end
+      end
 
       def paged_search
         rows  = Order.search(params)

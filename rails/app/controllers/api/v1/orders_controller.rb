@@ -10,6 +10,8 @@ module Api
     # Both share Order.search/Order.search_count, so the deferred-join switch
     # past OFFSET_THRESHOLD applies uniformly.
     class OrdersController < Api::BaseController
+      before_action :reject_nul_bytes
+
       # GET /api/v1/orders
       def index
         scope, page_meta = paged_search
@@ -31,6 +33,12 @@ module Api
       end
 
       private
+
+      # PostgreSQL rejects a NUL byte in text (a 500) while MySQL accepts it, so
+      # the API refuses it up front on either database.
+      def reject_nul_bytes
+        head :bad_request if list_params.to_h.values.any? { |v| v.is_a?(String) && v.include?("\0") }
+      end
 
       def paged_search
         params_hash = list_params.to_h.symbolize_keys

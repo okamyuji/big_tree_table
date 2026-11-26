@@ -223,6 +223,25 @@ func buildV1Tree(orders []model.Order) []v1TreeNode {
 	return customers
 }
 
+// v1ParamKeys are the parameters Api::V1::OrdersController#list_params permits.
+var v1ParamKeys = []string{
+	"order_type", "status", "customer_name", "product_name",
+	"date_from", "date_to", "sort", "order", "page", "per_page",
+}
+
+// hasNulByte matches the Rails API, which answers 400 because PostgreSQL
+// rejects a NUL byte in text.
+func hasNulByte(q url.Values) bool {
+	for _, key := range v1ParamKeys {
+		for _, v := range q[key] {
+			if strings.Contains(v, "\x00") {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 func v1MetaFrom(total int64, p model.QueryParams) v1Meta {
 	return v1Meta{Total: total, Page: p.Page, PerPage: p.PerPage,
 		TotalPages: int(math.Ceil(float64(total) / float64(p.PerPage)))}
@@ -235,7 +254,12 @@ func v1Handler(svc service.OrderService, build func([]model.Order, v1Meta) any) 
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 			return
 		}
-		params := parseV1Params(r.URL.Query())
+		query := r.URL.Query()
+		if hasNulByte(query) {
+			http.Error(w, "Bad Request", http.StatusBadRequest)
+			return
+		}
+		params := parseV1Params(query)
 		resp, err := svc.GetOrders(params)
 		if err != nil {
 			log.Printf("v1 search failed: %v", err)

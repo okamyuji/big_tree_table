@@ -16,17 +16,24 @@ snailsのCLIは`curl -fsSL https://raw.githubusercontent.com/snails-rb/snails/ma
 
 ```bash
 bin/build-binary
-PG_URL=postgres://bench:bench@127.0.0.1:55432/big_tree_table_bench \
-  API_BASIC_AUTH_USER=viewer API_BASIC_AUTH_PASSWORD=change-me \
+PG_URL=postgres://bench@127.0.0.1:55432/big_tree_table_bench \
+  API_BASIC_AUTH_USER=viewer API_BASIC_AUTH_PASSWORD="$(openssl rand -hex 16)" \
   SNAILS_ENV=production PORT=3000 build/snails
 ```
 
-`API_BASIC_AUTH_USER`と`API_BASIC_AUTH_PASSWORD`が未設定のとき、developmentとtest以外ではどのリクエストにも401を返します。全体の回数制限の既定は1分300回で、`API_RATE_LIMIT`で変えられるようにしてあります。リクエストごとのログが要らないときは`SNAILS_LOG_LEVEL=warn`を渡してください。
+`API_BASIC_AUTH_USER`と`API_BASIC_AUTH_PASSWORD`が未設定のとき、developmentとtest以外ではどのリクエストにも401を返します。認証失敗の回数はTCPの接続元アドレスごとに数えるので、APIは直接公開する前提です。リバースプロキシの後ろに置くと全員が1つの接続元として数えられ、誰か1人が10回間違えると全員が15分間429になります。
+
+snailsのPostgreSQLアダプタは、値をSQLの文字列に埋め込むときに単一引用符を重ねるだけです。この方法は`standard_conforming_strings`がonのときにしか安全ではないため、`config/environment.rb`が`PG_URL`にこの設定をonにするlibpqの`options`を足しています。全体の回数制限の既定は1分300回で、`API_RATE_LIMIT`で変えられるようにしてあります。リクエストごとのログが要らないときは`SNAILS_LOG_LEVEL=warn`を渡してください。
+
+macOSでビルドし直した直後に`build/snails`が何も出力せず`Killed: 9`で止まる場合は、`codesign -f -s - build/snails`で署名をかけ直してください。同じパスのバイナリを上書きしたときに、macOSが古い署名の情報で実行を止めることがあるためです。
 
 ## テスト
 
-`bin/test`はアプリをビルドし、実際のサーバーへHTTPでリクエストを送って確かめます。`PG_URL`には使い捨てのデータベースを渡してください。テストは`orders`表を作り直し、ケースごとに中身を消します。
+`bin/test`はアプリをビルドし、実際のサーバーへHTTPでリクエストを送って確かめます。`PG_URL`には使い捨てのデータベースを渡してください。テストは`orders`表を作り直し、ケースごとに中身を消します。テスト用のデータベースでは`standard_conforming_strings`をoffにしておくのがよい方法です。`config/environment.rb`が接続ごとにonへ戻していることを、バックスラッシュを含む検索のテストで同時に確かめられます。
 
 ```bash
-PG_URL=postgres://bench:bench@127.0.0.1:55432/big_tree_table_snails_test bin/test
+psql postgres://bench@127.0.0.1:55432/big_tree_table_bench -c 'CREATE DATABASE big_tree_table_snails_test'
+psql postgres://bench@127.0.0.1:55432/big_tree_table_bench \
+  -c 'ALTER DATABASE big_tree_table_snails_test SET standard_conforming_strings = off'
+PG_URL=postgres://bench@127.0.0.1:55432/big_tree_table_snails_test bin/test
 ```

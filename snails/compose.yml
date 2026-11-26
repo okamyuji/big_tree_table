@@ -39,6 +39,9 @@ services:
       PORT: "3000"
       PG_URL: postgres://postgres:${POSTGRES_PASSWORD:-password}@db:5432/snails_production
       SECRET_KEY_BASE: ${SECRET_KEY_BASE:-}
+      # Unset = every API request gets 401 (production fails closed).
+      API_BASIC_AUTH_USER: ${API_BASIC_AUTH_USER:-}
+      API_BASIC_AUTH_PASSWORD: ${API_BASIC_AUTH_PASSWORD:-}
     depends_on:
       db:
         condition: service_healthy

@@ -81,6 +81,13 @@ if Snails::Harness.file_selected?
       assert_equal(1, @response.parsed_body["meta"]["total"])
     end
 
+    test "a NUL byte in a filter gets 400 on both endpoints" do
+      get("/api/v1/orders", params: { "customer_name" => "a\u0000b" }, headers: AUTH)
+      assert_response(400)
+      get("/api/v1/orders/tree", params: { "status" => "\u0000" }, headers: AUTH)
+      assert_response(400)
+    end
+
     test "the tree sums fractional amounts exactly" do
       get("/api/v1/orders/tree", params: { "sort" => "order_number" }, headers: AUTH)
       assert_response(:ok)

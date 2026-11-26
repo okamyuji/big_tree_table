@@ -1,0 +1,4 @@
+ok secure_compare matches only identical strings
+ok API_RATE_LIMIT accepts only a positive integer
+ok the global counter trips once the limit is passed
+ok failure counts add up per address and give back on success

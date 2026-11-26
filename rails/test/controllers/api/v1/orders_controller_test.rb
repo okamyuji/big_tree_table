@@ -139,6 +139,14 @@ module Api
           assert_equal Order::MAX_PAGE, JSON.parse(response.body)["meta"]["page"]
         end
       end
+
+      test "GET /api/v1/orders and /tree answer 400 to a NUL byte in a filter" do
+        %w[/api/v1/orders /api/v1/orders/tree].each do |path|
+          get path, params: { customer_name: "a\u0000b" }
+
+          assert_response :bad_request
+        end
+      end
     end
   end
 end

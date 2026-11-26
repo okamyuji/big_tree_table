@@ -25,6 +25,19 @@
 # here, so a typo fails at boot instead of leaving the process in UTC.
 Snails.time_zone = "UTC"
 
+# The PostgreSQL adapter binds values by quoting them in the SQL text and
+# doubling single quotes only, which is safe only while
+# standard_conforming_strings is on. Force it for every session through libpq's
+# `options`, whatever the server or database default is.
+pg_url = ENV["PG_URL"].to_s
+unless pg_url.empty? || pg_url.include?("standard_conforming_strings")
+  ENV["PG_URL"] = if pg_url.start_with?("postgres://", "postgresql://")
+    "#{pg_url}#{pg_url.include?("?") ? "&" : "?"}options=-c%20standard_conforming_strings%3Don"
+  else
+    "#{pg_url} options='-c standard_conforming_strings=on'"
+  end
+end
+
 # Signing key — `Snails.app.secret_key_base` is the standard reader. Its
 # source is the deployment's SECRET_KEY_BASE, and a missing value raises.
 # If this app signs tokens, read it here so a missing key fails at boot:

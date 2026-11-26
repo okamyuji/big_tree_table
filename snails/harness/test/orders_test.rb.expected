@@ -4,4 +4,5 @@ ok the list renders values the way Rails does
 ok LIKE terms match %, _, backslash, quote and ? literally
 ok invalid paging, sort and dates fall back to the defaults
 ok dates filter inclusively, leap day included
+ok a NUL byte in a filter gets 400 on both endpoints
 ok the tree sums fractional amounts exactly
