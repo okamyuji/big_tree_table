@@ -6,6 +6,8 @@ MySQL上の100万件の注文データを、ReactのTreeTableと仮想スクロ�
 
 - [`go/`](go/) Go + MySQLのバックエンドと、React + TypeScriptのフロントエンドがあります。Rails版の移植元はこの実装です。
 - [`rails/`](rails/) Rails 8.1 + ActiveRecordのバックエンドと、Go版から流用したReactのフロントエンドがあります。
+- [`snails/`](snails/) Rails版のAPIを[snails](https://snails-rb.org/)で書き直したバックエンドです。PostgreSQLで動きます。
+- [`bench/`](bench/) 3つのバックエンドを同じPostgreSQLとデータで比べるためのスクリプトがあります。
 
 起動方法、API、テストの手順は、各ディレクトリのREADMEで説明しています。どちらの手順も、そのディレクトリを起点にコマンドを実行します。
 
