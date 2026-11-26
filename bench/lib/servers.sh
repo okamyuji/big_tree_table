@@ -3,11 +3,16 @@
 # sandbox では別のコマンドで起動したプロセスに触れられないため、起動・計測・停止を1つのスクリプト内で行う。
 #
 # 必要な環境変数: PG_URL
-# 任意: WORKERS（プロセス数、既定 1）、THREADS（Rails のスレッド数と各 DB プール、既定 5）
+# 任意: RAILS_WORKERS（Puma のプロセス数、既定 1）、THREADS（Puma のスレッド数、既定 5）
+#
+# Rails は GVL のため1プロセスで1コアしか使えないので、ベンチではプロセス数をコア数に合わせる。
+# Go と snails は1プロセスで全コアを使うので、1プロセスのまま動かす。
+# DB の接続数は3者とも Rails の合計（RAILS_WORKERS × THREADS）にそろえる。
 
 BENCH_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
-WORKERS="${WORKERS:-1}"
+RAILS_WORKERS="${RAILS_WORKERS:-1}"
 THREADS="${THREADS:-5}"
+DB_CONNS=$((RAILS_WORKERS * THREADS))
 SERVER_PIDS=()
 
 export API_BASIC_AUTH_USER="${API_BASIC_AUTH_USER:-bench}"
@@ -27,7 +32,7 @@ start_rails() {
   local port="$1"
   # macOS: libpq の GSS 初期化が Puma の fork 後に落ちるため、GSS を使わず fork 安全検査も外す。
   (cd "$BENCH_ROOT/rails" && PGGSSENCMODE=disable OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES RAILS_ENV=bench SECRET_KEY_BASE="$(openssl rand -hex 64)" \
-    RAILS_LOG_LEVEL=warn WEB_CONCURRENCY="$WORKERS" RAILS_MAX_THREADS="$THREADS" PORT="$port" \
+    RAILS_LOG_LEVEL=warn WEB_CONCURRENCY="$RAILS_WORKERS" RAILS_MAX_THREADS="$THREADS" PORT="$port" \
     exec bundle exec puma -C config/puma.rb) >"$BENCH_LOG_DIR/rails.log" 2>&1 &
   SERVER_PIDS+=($!)
   wait_listening "$port"
@@ -36,8 +41,7 @@ start_rails() {
 start_go() {
   local port="$1" bin="${TMPDIR:-/tmp}/btt-go"
   (cd "$BENCH_ROOT/go/backend" && go build -o "$bin" .)
-  # Go は1プロセスで全コアを使う。DB プールは他の2者の合計と同じ大きさにする。
-  DB_DRIVER=postgres PORT="$port" DB_MAX_CONNS=$((WORKERS * THREADS)) DB_MAX_IDLE_CONNS=$((WORKERS * THREADS)) \
+  DB_DRIVER=postgres PORT="$port" DB_MAX_CONNS="$DB_CONNS" DB_MAX_IDLE_CONNS="$DB_CONNS" \
     "$bin" >"$BENCH_LOG_DIR/go.log" 2>&1 &
   SERVER_PIDS+=($!)
   wait_listening "$port"
@@ -45,7 +49,7 @@ start_go() {
 
 start_snails() {
   local port="$1"
-  PORT="$port" SNAILS_ENV=production SNAILS_LOG_LEVEL=warn WORKERS="$WORKERS" DATABASE_POOL_SIZE="$THREADS" \
+  PORT="$port" SNAILS_ENV=production SNAILS_LOG_LEVEL=warn WORKERS=1 DATABASE_POOL_SIZE="$DB_CONNS" \
     "$BENCH_ROOT/snails/build/snails" >"$BENCH_LOG_DIR/snails.log" 2>&1 &
   SERVER_PIDS+=($!)
   wait_listening "$port"

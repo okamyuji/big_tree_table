@@ -5,7 +5,7 @@
 # 使い方: PG_URL=postgres://.../big_tree_table_bench bench/run.sh
 # 任意の環境変数（既定値）:
 #   TARGETS="rails go snails"  SCENARIOS="list deep tree filter"
-#   WORKERS=4 THREADS=5 VUS=32 DURATION=30s WARMUP=10s COOLDOWN=60
+#   RAILS_WORKERS=<コア数> THREADS=5 VUS=32 DURATION=30s WARMUP=10s COOLDOWN=60
 #   K6="mise exec k6@2.3.0 -- k6"
 set -euo pipefail
 : "${PG_URL:?PG_URL にベンチ用の DB（bench/db/setup.sh で投入済み）を指定してください}"
@@ -14,7 +14,7 @@ here="$(cd "$(dirname "$0")" && pwd)"
 
 TARGETS="${TARGETS:-rails go snails}"
 SCENARIOS="${SCENARIOS:-list deep tree filter}"
-export WORKERS="${WORKERS:-4}" THREADS="${THREADS:-5}"
+export RAILS_WORKERS="${RAILS_WORKERS:-$(getconf _NPROCESSORS_ONLN)}" THREADS="${THREADS:-5}"
 VUS="${VUS:-32}" DURATION="${DURATION:-30s}" WARMUP="${WARMUP:-10s}" COOLDOWN="${COOLDOWN:-60}"
 K6="${K6:-mise exec k6@2.3.0 -- k6}"
 # カウンタの処理は残しつつ、429 で計測が崩れないよう上限を上げる。
@@ -22,6 +22,14 @@ export API_RATE_LIMIT=1000000000
 
 # shellcheck source=lib/servers.sh
 source "$here/lib/servers.sh"
+
+max_conns="$(psql "$PG_URL" -XAtc 'SHOW max_connections')"
+if ((DB_CONNS >= max_conns)); then
+  echo "DB の接続数 ${DB_CONNS}（RAILS_WORKERS × THREADS）が PostgreSQL の max_connections ${max_conns} 以上です。" >&2
+  echo "RAILS_WORKERS か THREADS を下げるか、max_connections を上げてください。" >&2
+  exit 1
+fi
+
 out="$here/results/$(date +%Y%m%d-%H%M%S)"
 mkdir -p "$out"
 BENCH_LOG_DIR="$out/logs"
@@ -41,7 +49,7 @@ tree_rss() {
 }
 
 k6_run() { # k6_run <target> <scenario> <duration> <summary file or empty>
-  local args=(run --quiet --no-color -e "BASE_URL=http://127.0.0.1:${port[$1]}" -e "SCENARIO=$2"
+  local args=(run --quiet --no-color --no-usage-report -e "BASE_URL=http://127.0.0.1:${port[$1]}" -e "SCENARIO=$2"
     -e "VUS=$VUS" -e "DURATION=$3" -e "AUTH=$API_BASIC_AUTH_USER:$API_BASIC_AUTH_PASSWORD")
   [[ -n "$4" ]] && args+=(--summary-export "$4")
   $K6 "${args[@]}" "$here/k6/api.js" >/dev/null
@@ -50,7 +58,7 @@ k6_run() { # k6_run <target> <scenario> <duration> <summary file or empty>
 {
   echo "date=$(date '+%Y-%m-%d %H:%M:%S %Z')"
   echo "host=$(uname -srm) cpus=$(getconf _NPROCESSORS_ONLN)"
-  echo "workers=$WORKERS threads=$THREADS vus=$VUS duration=$DURATION warmup=$WARMUP cooldown=${COOLDOWN}s"
+  echo "rails_workers=$RAILS_WORKERS threads=$THREADS db_conns=$((RAILS_WORKERS * THREADS)) vus=$VUS duration=$DURATION warmup=$WARMUP cooldown=${COOLDOWN}s"
   echo "rows=$(psql "$PG_URL" -XAtc 'SELECT count(*) FROM orders')"
   echo "commit=$(git -C "$here" rev-parse --short HEAD)"
 } >"$out/env.txt"

@@ -55,7 +55,7 @@ PG_URL=postgres://bench:bench@127.0.0.1:55432/big_tree_table_bench bench/run.sh
 | tree | 500件をツリーにまとめる応答 |
 | filter | LIKE、等値、日付範囲を組み合わせた絞り込み |
 
-条件は環境変数で変えられます。既定値は`run.sh`の冒頭に書いてあります。`WORKERS`はRails版とsnails版のプロセス数、`THREADS`はRails版のスレッド数と各プロセスのDB接続数です。Go版は1プロセスで動かし、DB接続数を`WORKERS × THREADS`にそろえます。
+条件は環境変数で変えられます。既定値は`run.sh`の冒頭に書いてあります。RailsはGVLのため1プロセスで1コアしか使えないので、`RAILS_WORKERS`の既定値をCPUのコア数にしています。Go版とsnails版は1プロセスで全コアを使うため、1プロセスのまま動かします。DBの接続数は、3者とも`RAILS_WORKERS × THREADS`にそろえてあります。
 
 結果は`bench/results/<日時>/`に保存され、`summary.md`に表がまとまります。サーバーのRSSは`ps`で測るので、`ps`を使えない環境では空欄になります。
 
