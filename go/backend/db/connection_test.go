@@ -3,6 +3,8 @@ package db
 import (
 	"testing"
 	"time"
+
+	"github.com/jackc/pgx/v5"
 )
 
 func TestConnect_FailsWithinPingTimeoutWhenHostDoesNotAnswer(t *testing.T) {
@@ -67,5 +69,25 @@ func TestEnvInt(t *testing.T) {
 		if got := envInt("DB_MAX_CONNS", 25); got != want {
 			t.Errorf("DB_MAX_CONNS=%q: %d, want %d", v, got, want)
 		}
+	}
+}
+
+func TestPostgresConfig_PlansEachQueryWithItsValues(t *testing.T) {
+	cfg, err := postgresConfig("postgres://u@127.0.0.1:5432/x")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.DefaultQueryExecMode != pgx.QueryExecModeExec {
+		t.Errorf("DefaultQueryExecMode = %v, want exec", cfg.DefaultQueryExecMode)
+	}
+	cfg, err = postgresConfig("postgres://u@127.0.0.1:5432/x?default_query_exec_mode=simple_protocol")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.DefaultQueryExecMode != pgx.QueryExecModeSimpleProtocol {
+		t.Errorf("an explicit mode in PG_URL must win, got %v", cfg.DefaultQueryExecMode)
+	}
+	if _, err := postgresConfig("postgres://u@[::1"); err == nil {
+		t.Error("a malformed PG_URL must be an error")
 	}
 }

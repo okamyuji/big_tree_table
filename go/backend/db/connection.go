@@ -7,10 +7,12 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	_ "github.com/go-sql-driver/mysql"
-	_ "github.com/jackc/pgx/v5/stdlib"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/stdlib"
 )
 
 // pingTimeout bounds the startup check: an unreachable host otherwise blocks for the OS TCP timeout (75s on macOS).
@@ -20,14 +22,7 @@ const pingTimeout = 5 * time.Second
 func Postgres() bool { return os.Getenv("DB_DRIVER") == "postgres" }
 
 func Connect() (*sql.DB, error) {
-	driver, dsn := "mysql", mysqlDSN()
-	if Postgres() {
-		driver, dsn = "pgx", os.Getenv("PG_URL")
-		if dsn == "" {
-			return nil, errors.New("DB_DRIVER=postgres needs PG_URL")
-		}
-	}
-	db, err := sql.Open(driver, dsn)
+	db, err := open()
 	if err != nil {
 		return nil, err
 	}
@@ -36,6 +31,37 @@ func Connect() (*sql.DB, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), pingTimeout)
 	defer cancel()
 	return db, db.PingContext(ctx)
+}
+
+func open() (*sql.DB, error) {
+	if !Postgres() {
+		return sql.Open("mysql", mysqlDSN())
+	}
+	url := os.Getenv("PG_URL")
+	if url == "" {
+		return nil, errors.New("DB_DRIVER=postgres needs PG_URL")
+	}
+	cfg, err := postgresConfig(url)
+	if err != nil {
+		return nil, err
+	}
+	return stdlib.OpenDB(*cfg), nil
+}
+
+// postgresConfig plans every query with its actual values. pgx's default
+// caches prepared statements, and after a few runs PostgreSQL may switch them
+// to a generic plan: for the LIKE + date-range filter that plan measured 77 ms
+// against 0.9 ms. Rails and snails inline the values, so they never hit it.
+// A default_query_exec_mode in PG_URL still wins.
+func postgresConfig(url string) (*pgx.ConnConfig, error) {
+	cfg, err := pgx.ParseConfig(url)
+	if err != nil {
+		return nil, err
+	}
+	if !strings.Contains(url, "default_query_exec_mode") {
+		cfg.DefaultQueryExecMode = pgx.QueryExecModeExec
+	}
+	return cfg, nil
 }
 
 func mysqlDSN() string {
