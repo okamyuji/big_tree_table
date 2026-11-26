@@ -7,7 +7,7 @@
 # 任意の環境変数（既定値）:
 #   TARGETS="rails go snails"  SCENARIOS="list deep tree filter"
 #   RAILS_WORKERS=<コア数> THREADS=5 VUS=32 DURATION=30s WARMUP=10s COOLDOWN=60
-#   RESTART_PER_SCENARIO=1  K6="mise exec k6@2.3.0 -- k6"
+#   RESTART_PER_SCENARIO=1  MAX_LOAD=<コア数の半分>  LOAD_WAIT_LIMIT=300  K6="mise exec k6@2.3.0 -- k6"
 set -euo pipefail
 : "${PG_URL:?PG_URL にベンチ用の DB（bench/db/setup.sh で投入済み）を指定してください}"
 export PG_URL
@@ -19,6 +19,9 @@ export RAILS_WORKERS="${RAILS_WORKERS:-$(getconf _NPROCESSORS_ONLN)}" THREADS="$
 VUS="${VUS:-32}" DURATION="${DURATION:-30s}" WARMUP="${WARMUP:-10s}" COOLDOWN="${COOLDOWN:-60}"
 # 1以外にすると、シナリオを同じプロセスで続けて流す（順番の影響を見るため）。
 RESTART_PER_SCENARIO="${RESTART_PER_SCENARIO:-1}"
+# ほかのプロセスが CPU を使っていると数字が揺れるので、1分間のロードアベレージがこの値以下になるまで待つ。
+MAX_LOAD="${MAX_LOAD:-$(($(getconf _NPROCESSORS_ONLN) / 2))}"
+LOAD_WAIT_LIMIT="${LOAD_WAIT_LIMIT:-300}"
 K6="${K6:-mise exec k6@2.3.0 -- k6}"
 # カウンタの処理は残しつつ、429 で計測が崩れないよう上限を上げる。
 export API_RATE_LIMIT=1000000000
@@ -51,6 +54,22 @@ tree_rss() {
   ps -o rss= -p "$(IFS=,; echo "${pids[*]}")" 2>/dev/null | awk '{s+=$1} END {if (NR) print s}' || true
 }
 
+load1() { uptime | sed -E 's/.*load averages?: *([0-9.]+).*/\1/'; }
+
+# ロードアベレージが MAX_LOAD 以下になるまで待ち、そのときの値を返す。上限時間を超えたら止める。
+wait_for_quiet() {
+  local waited=0 load
+  while load="$(load1)"; awk -v l="$load" -v m="$MAX_LOAD" 'BEGIN { exit !(l > m) }'; do
+    if ((waited >= LOAD_WAIT_LIMIT)); then
+      echo "ロードアベレージ ${load} が ${LOAD_WAIT_LIMIT} 秒待っても ${MAX_LOAD} 以下に下がりません。ほかの重い処理を止めてください。" >&2
+      exit 1
+    fi
+    sleep 10
+    waited=$((waited + 10))
+  done
+  echo "$load"
+}
+
 k6_run() { # k6_run <target> <scenario> <duration> <summary file or empty>
   local args=(run --quiet --no-color --no-usage-report -e "BASE_URL=http://127.0.0.1:${port[$1]}" -e "SCENARIO=$2"
     -e "VUS=$VUS" -e "DURATION=$3" -e "AUTH=$API_BASIC_AUTH_USER:$API_BASIC_AUTH_PASSWORD")
@@ -79,6 +98,8 @@ for t in $TARGETS; do
   : >"$out/$t-rss.txt"
   [[ "$RESTART_PER_SCENARIO" == 1 ]] || "start_$t" "${port[$t]}"
   for s in $SCENARIOS; do
+    quiet_load="$(wait_for_quiet)"
+    echo "load1_before_${s}=${quiet_load}" >>"$out/$t-rss.txt"
     if [[ "$RESTART_PER_SCENARIO" == 1 ]]; then
       "start_$t" "${port[$t]}"
       echo "rss_idle_before_${s}_kib=$(tree_rss)" >>"$out/$t-rss.txt"
