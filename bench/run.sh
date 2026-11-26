@@ -58,6 +58,8 @@ k6_run() { # k6_run <target> <scenario> <duration> <summary file or empty>
 {
   echo "date=$(date '+%Y-%m-%d %H:%M:%S %Z')"
   echo "host=$(uname -srm) cpus=$(getconf _NPROCESSORS_ONLN)"
+  # PostgreSQL が Docker の VM 内で動くとき、DB に重いシナリオの上限はこの CPU 数で決まる。
+  echo "docker_vm_cpus=$(docker info --format '{{.NCPU}}' 2>/dev/null || echo unknown)"
   echo "rails_workers=$RAILS_WORKERS threads=$THREADS db_conns=$((RAILS_WORKERS * THREADS)) vus=$VUS duration=$DURATION warmup=$WARMUP cooldown=${COOLDOWN}s"
   echo "rows=$(psql "$PG_URL" -XAtc 'SELECT count(*) FROM orders')"
   echo "commit=$(git -C "$here" rev-parse --short HEAD)"
