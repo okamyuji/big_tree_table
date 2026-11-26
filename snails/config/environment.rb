@@ -30,6 +30,10 @@ Snails.time_zone = "UTC"
 # standard_conforming_strings is on. Force it for every session through libpq's
 # `options`, whatever the server or database default is.
 pg_url = ENV["PG_URL"].to_s
+# libpq keeps only one `options`, so appending ours would silently drop the caller's.
+if pg_url.include?("options") && !pg_url.include?("standard_conforming_strings")
+  abort("PG_URL already sets libpq options; add -c standard_conforming_strings=on to them")
+end
 unless pg_url.empty? || pg_url.include?("standard_conforming_strings")
   ENV["PG_URL"] = if pg_url.start_with?("postgres://", "postgresql://")
     "#{pg_url}#{pg_url.include?("?") ? "&" : "?"}options=-c%20standard_conforming_strings%3Don"

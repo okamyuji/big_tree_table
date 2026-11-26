@@ -23,7 +23,9 @@ PG_URL=postgres://bench@127.0.0.1:55432/big_tree_table_bench \
 
 `API_BASIC_AUTH_USER`と`API_BASIC_AUTH_PASSWORD`が未設定のとき、developmentとtest以外ではどのリクエストにも401を返します。認証失敗の回数はTCPの接続元アドレスごとに数えるので、APIは直接公開する前提です。リバースプロキシの後ろに置くと全員が1つの接続元として数えられ、誰か1人が10回間違えると全員が15分間429になります。
 
-snailsのPostgreSQLアダプタは、値をSQLの文字列に埋め込むときに単一引用符を重ねるだけです。この方法は`standard_conforming_strings`がonのときにしか安全ではないため、`config/environment.rb`が`PG_URL`にこの設定をonにするlibpqの`options`を足しています。全体の回数制限の既定は1分300回で、`API_RATE_LIMIT`で変えられるようにしてあります。リクエストごとのログが要らないときは`SNAILS_LOG_LEVEL=warn`を渡してください。
+snailsのPostgreSQLアダプタは、値をSQLの文字列に埋め込むときに単一引用符を重ねるだけです。この方法は`standard_conforming_strings`がonのときにしか安全ではないため、そこで`PG_URL`にこの設定をonにするlibpqの`options`を足すのが、`config/environment.rb`の役目です。libpqは`options`を1つしか持てないため、`PG_URL`が別の`options`を指定しているときは、`-c standard_conforming_strings=on`を含めるよう求めて起動を止めます。
+
+全体の回数制限の既定は1分300回で、`API_RATE_LIMIT`で変えられるようにしてあります。リクエストごとのログが要らないときは`SNAILS_LOG_LEVEL=warn`を渡してください。
 
 macOSでビルドし直した直後に`build/snails`が何も出力せず`Killed: 9`で止まる場合は、`codesign -f -s - build/snails`で署名をかけ直してください。同じパスのバイナリを上書きしたときに、macOSが古い署名の情報で実行を止めることがあるためです。
 

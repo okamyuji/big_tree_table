@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"bigtable-backend/model"
 	"bigtable-backend/service"
@@ -26,22 +27,31 @@ const (
 
 var v1DatePattern = regexp.MustCompile(`^\d{4}-\d{2}-\d{2}$`)
 
+// lastValue is the value Rails keeps for a repeated query parameter: the last one.
+func lastValue(q url.Values, key string) string {
+	vs := q[key]
+	if len(vs) == 0 {
+		return ""
+	}
+	return vs[len(vs)-1]
+}
+
 func parseV1Params(q url.Values) model.QueryParams {
-	perPage := rubyToI(q.Get("per_page"))
+	perPage := rubyToI(lastValue(q, "per_page"))
 	if perPage <= 0 {
 		perPage = v1DefaultPerPage
 	}
 	return model.QueryParams{
-		Page:         min(max(rubyToI(q.Get("page")), 1), model.MaxPage),
+		Page:         min(max(rubyToI(lastValue(q, "page")), 1), model.MaxPage),
 		PerPage:      min(perPage, v1MaxPerPage),
-		Sort:         q.Get("sort"),
-		Order:        q.Get("order"),
-		OrderType:    q.Get("order_type"),
-		Status:       q.Get("status"),
-		CustomerName: q.Get("customer_name"),
-		ProductName:  q.Get("product_name"),
-		DateFrom:     isoDateOrEmpty(q.Get("date_from")),
-		DateTo:       isoDateOrEmpty(q.Get("date_to")),
+		Sort:         lastValue(q, "sort"),
+		Order:        lastValue(q, "order"),
+		OrderType:    lastValue(q, "order_type"),
+		Status:       lastValue(q, "status"),
+		CustomerName: lastValue(q, "customer_name"),
+		ProductName:  lastValue(q, "product_name"),
+		DateFrom:     isoDateOrEmpty(lastValue(q, "date_from")),
+		DateTo:       isoDateOrEmpty(lastValue(q, "date_to")),
 	}
 }
 
@@ -229,14 +239,13 @@ var v1ParamKeys = []string{
 	"date_from", "date_to", "sort", "order", "page", "per_page",
 }
 
-// hasNulByte matches the Rails API, which answers 400 because PostgreSQL
-// rejects a NUL byte in text.
-func hasNulByte(q url.Values) bool {
+// unacceptableText finds a value PostgreSQL would reject as text (a NUL byte
+// or invalid UTF-8), which the Rails API answers with 400 before any query.
+func unacceptableText(q url.Values) bool {
 	for _, key := range v1ParamKeys {
-		for _, v := range q[key] {
-			if strings.Contains(v, "\x00") {
-				return true
-			}
+		v := lastValue(q, key)
+		if strings.Contains(v, "\x00") || !utf8.ValidString(v) {
+			return true
 		}
 	}
 	return false
@@ -255,7 +264,7 @@ func v1Handler(svc service.OrderService, build func([]model.Order, v1Meta) any) 
 			return
 		}
 		query := r.URL.Query()
-		if hasNulByte(query) {
+		if unacceptableText(query) {
 			http.Error(w, "Bad Request", http.StatusBadRequest)
 			return
 		}

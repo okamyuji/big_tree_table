@@ -62,6 +62,7 @@ paths=(
   "/api/v1/orders?date_from=2026-13-45&date_to=2026-02-30&per_page=2"
   "/api/v1/orders?date_from=2026-1-5&date_to=20260105&per_page=2"
   "/api/v1/orders?status="
+  "/api/v1/orders?status=pending&status=shipped&per_page=3"
   "/api/v1/orders?order_type=nothing"
   "/api/v1/orders/tree"
   "/api/v1/orders/tree?per_page=500&sort=customer_code"
@@ -122,6 +123,10 @@ status_only() { # status_only <label> <path> <curl args...>
 }
 status_only nul-byte "/api/v1/orders?customer_name=a%00b" "${auth[@]}"
 status_only nul-byte-tree "/api/v1/orders/tree?status=%00" "${auth[@]}"
+status_only nul-byte-earlier-value "/api/v1/orders?status=%00&status=shipped" "${auth[@]}"
+status_only nul-byte-last-value "/api/v1/orders?status=shipped&status=%00" "${auth[@]}"
+status_only invalid-utf8 "/api/v1/orders?customer_name=%FF" "${auth[@]}"
+status_only invalid-utf8-tree "/api/v1/orders/tree?status=%C3%28" "${auth[@]}"
 status_only no-auth "/api/v1/orders"
 status_only bearer "/api/v1/orders" -H "Authorization: Bearer nope"
 status_only wrong-user "/api/v1/orders" -u "nobody:$API_BASIC_AUTH_PASSWORD"

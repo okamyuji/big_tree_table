@@ -239,3 +239,27 @@ func TestV1Handlers_RejectNulBytes(t *testing.T) {
 		t.Errorf("a NUL byte outside the permitted keys: status = %d, want 200", rec.Code)
 	}
 }
+
+func TestV1Handlers_RejectInvalidUTF8(t *testing.T) {
+	for _, q := range []string{"customer_name=%FF", "status=%C3%28"} {
+		rec := httptest.NewRecorder()
+		V1OrdersHandler(&fakeService{}).ServeHTTP(rec, httptest.NewRequest("GET", "/api/v1/orders?"+q, nil))
+		if rec.Code != http.StatusBadRequest {
+			t.Errorf("%s: status = %d, want 400", q, rec.Code)
+		}
+	}
+}
+
+func TestV1Handlers_RepeatedParameterUsesTheLastValueLikeRails(t *testing.T) {
+	svc := &fakeService{}
+	rec := httptest.NewRecorder()
+	V1OrdersHandler(svc).ServeHTTP(rec, httptest.NewRequest("GET", "/api/v1/orders?status=%00&status=shipped&page=2&page=3", nil))
+	if rec.Code != http.StatusOK || svc.got.Status != "shipped" || svc.got.Page != 3 {
+		t.Errorf("status=%d params=%+v, want 200 with the last values", rec.Code, svc.got)
+	}
+	rec = httptest.NewRecorder()
+	V1OrdersHandler(svc).ServeHTTP(rec, httptest.NewRequest("GET", "/api/v1/orders?status=shipped&status=%00", nil))
+	if rec.Code != http.StatusBadRequest {
+		t.Errorf("a NUL byte in the last value: status = %d, want 400", rec.Code)
+	}
+}
