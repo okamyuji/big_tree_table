@@ -1,12 +1,13 @@
 #!/usr/bin/env bash
 # Rails / Go / snails を1つずつ起動して k6 で負荷をかける。同時には動かさない。
-# 1実装ごとに「起動 → シナリオごとにウォームアップと計測 → 停止 → クールダウン」を行う。
+# シナリオごとにサーバーを起動し直し、前のシナリオで膨らんだメモリなどの影響を持ち越さない。
+# 1シナリオは「起動 → ウォームアップ → 計測 → 停止」で、実装を替えるときはクールダウンを置く。
 #
 # 使い方: PG_URL=postgres://.../big_tree_table_bench bench/run.sh
 # 任意の環境変数（既定値）:
 #   TARGETS="rails go snails"  SCENARIOS="list deep tree filter"
 #   RAILS_WORKERS=<コア数> THREADS=5 VUS=32 DURATION=30s WARMUP=10s COOLDOWN=60
-#   K6="mise exec k6@2.3.0 -- k6"
+#   RESTART_PER_SCENARIO=1  K6="mise exec k6@2.3.0 -- k6"
 set -euo pipefail
 : "${PG_URL:?PG_URL にベンチ用の DB（bench/db/setup.sh で投入済み）を指定してください}"
 export PG_URL
@@ -16,6 +17,8 @@ TARGETS="${TARGETS:-rails go snails}"
 SCENARIOS="${SCENARIOS:-list deep tree filter}"
 export RAILS_WORKERS="${RAILS_WORKERS:-$(getconf _NPROCESSORS_ONLN)}" THREADS="${THREADS:-5}"
 VUS="${VUS:-32}" DURATION="${DURATION:-30s}" WARMUP="${WARMUP:-10s}" COOLDOWN="${COOLDOWN:-60}"
+# 1以外にすると、シナリオを同じプロセスで続けて流す（順番の影響を見るため）。
+RESTART_PER_SCENARIO="${RESTART_PER_SCENARIO:-1}"
 K6="${K6:-mise exec k6@2.3.0 -- k6}"
 # カウンタの処理は残しつつ、429 で計測が崩れないよう上限を上げる。
 export API_RATE_LIMIT=1000000000
@@ -60,7 +63,7 @@ k6_run() { # k6_run <target> <scenario> <duration> <summary file or empty>
   echo "host=$(uname -srm) cpus=$(getconf _NPROCESSORS_ONLN)"
   # PostgreSQL が Docker の VM 内で動くとき、DB に重いシナリオの上限はこの CPU 数で決まる。
   echo "docker_vm_cpus=$(docker info --format '{{.NCPU}}' 2>/dev/null || echo unknown)"
-  echo "rails_workers=$RAILS_WORKERS threads=$THREADS db_conns=$((RAILS_WORKERS * THREADS)) vus=$VUS duration=$DURATION warmup=$WARMUP cooldown=${COOLDOWN}s"
+  echo "restart_per_scenario=$RESTART_PER_SCENARIO rails_workers=$RAILS_WORKERS threads=$THREADS db_conns=$((RAILS_WORKERS * THREADS)) vus=$VUS duration=$DURATION warmup=$WARMUP cooldown=${COOLDOWN}s"
   echo "rows=$(psql "$PG_URL" -XAtc 'SELECT count(*) FROM orders')"
   echo "commit=$(git -C "$here" rev-parse --short HEAD)"
 } >"$out/env.txt"
@@ -73,12 +76,17 @@ for t in $TARGETS; do
   fi
   first=0
   echo "== $t"
-  "start_$t" "${port[$t]}"
-  echo "rss_idle_kib=$(tree_rss)" >"$out/$t-rss.txt"
+  : >"$out/$t-rss.txt"
+  [[ "$RESTART_PER_SCENARIO" == 1 ]] || "start_$t" "${port[$t]}"
   for s in $SCENARIOS; do
+    if [[ "$RESTART_PER_SCENARIO" == 1 ]]; then
+      "start_$t" "${port[$t]}"
+      echo "rss_idle_before_${s}_kib=$(tree_rss)" >>"$out/$t-rss.txt"
+    fi
     k6_run "$t" "$s" "$WARMUP" ""
     k6_run "$t" "$s" "$DURATION" "$out/$t-$s.json"
     echo "rss_after_${s}_kib=$(tree_rss)" >>"$out/$t-rss.txt"
+    if [[ "$RESTART_PER_SCENARIO" == 1 ]]; then stop_servers; fi
     echo "   $s done"
   done
   stop_servers
