@@ -29,3 +29,9 @@ production:
     <<: *primary_production
     database: big_tree_table_production_queue
     migrations_paths: db/queue_migrate
+
+# RAILS_ENV=bench: the PostgreSQL database shared with the Go and snails versions (see ../bench).
+bench:
+  adapter: postgresql
+  url: <%= ENV["PG_URL"] %>
+  max_connections: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>

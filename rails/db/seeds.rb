@@ -17,8 +17,10 @@ target_count = Integer(ENV.fetch("SEED_ORDERS", "10000"))
 reset        = ENV["SEED_RESET"] == "true"
 
 if reset
-  Order.delete_all
-  ActiveRecord::Base.connection.execute("ALTER TABLE orders AUTO_INCREMENT = 1")
+  conn = ActiveRecord::Base.connection
+  conn.truncate("orders")
+  # MySQL's TRUNCATE restarts AUTO_INCREMENT; PostgreSQL's keeps the sequence.
+  conn.reset_pk_sequence!("orders") if conn.respond_to?(:reset_pk_sequence!)
 end
 
 current = Order.count

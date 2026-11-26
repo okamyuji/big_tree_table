@@ -21,8 +21,8 @@ func (m *mockOrderRepository) CountOrders(params model.QueryParams) (int64, erro
 }
 
 func TestOrderRepositoryInterface(t *testing.T) {
-	// Verify that MySQLOrderRepository implements OrderRepository
-	var _ OrderRepository = &MySQLOrderRepository{}
+	// Verify that SQLOrderRepository implements OrderRepository
+	var _ OrderRepository = &SQLOrderRepository{}
 
 	// Verify that the mock also implements the interface
 	var _ OrderRepository = &mockOrderRepository{}
@@ -63,5 +63,14 @@ func TestMockOrderRepository_CountOrders(t *testing.T) {
 	}
 	if count != 42 {
 		t.Errorf("expected 42, got %d", count)
+	}
+}
+
+func TestRebind(t *testing.T) {
+	if got := NewMySQLOrderRepository(nil).rebind("a = ? AND b = ?"); got != "a = ? AND b = ?" {
+		t.Errorf("mysql rebind = %q", got)
+	}
+	if got := NewPostgresOrderRepository(nil).rebind("a = ? AND b = ?"); got != "a = $1 AND b = $2" {
+		t.Errorf("postgres rebind = %q", got)
 	}
 }

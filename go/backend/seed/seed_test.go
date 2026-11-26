@@ -32,3 +32,12 @@ func TestPlanSeed(t *testing.T) {
 		})
 	}
 }
+
+func TestTruncateSQL(t *testing.T) {
+	if got := truncateSQL(false); got != "TRUNCATE TABLE orders" {
+		t.Errorf("mysql: %q", got)
+	}
+	if got := truncateSQL(true); got != "TRUNCATE TABLE orders RESTART IDENTITY" {
+		t.Errorf("postgres: %q", got)
+	}
+}

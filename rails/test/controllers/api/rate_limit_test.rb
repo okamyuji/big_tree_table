@@ -20,6 +20,18 @@ module Api
       ENV.update(@saved_env)
     end
 
+    test "allows 300 requests per minute when API_RATE_LIMIT is unset" do
+      assert_nil ENV["API_RATE_LIMIT"]
+      assert_equal 300, LIMIT
+      assert_equal 1.minute, WINDOW
+    end
+
+    test "API_RATE_LIMIT accepts only a positive integer" do
+      { nil => 300, "1000000" => 1_000_000, "+5" => 5, "0" => 300, "-1" => 300, "abc" => 300, "12abc" => 300 }.each do |value, want|
+        assert_equal want, Api::BaseController.rate_limit_from(value), "API_RATE_LIMIT=#{value.inspect}"
+      end
+    end
+
     def call_api(ip, secret)
       credentials = ActionController::HttpAuthentication::Basic.encode_credentials(@user, secret)
       get "/api/v1/orders", headers: { "HTTP_AUTHORIZATION" => credentials }, env: { "REMOTE_ADDR" => ip }

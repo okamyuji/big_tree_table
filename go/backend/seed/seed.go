@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"bigtable-backend/db"
+	"bigtable-backend/model"
 )
 
 const (
@@ -51,11 +52,49 @@ func main() {
 	}
 	defer conn.Close()
 
-	createTable(conn)
-	seedData(conn)
+	pg := db.Postgres()
+	createTable(conn, pg)
+	seedData(conn, pg)
 }
 
-func createTable(db *sql.DB) {
+// createTablePostgres is the PostgreSQL form of the MySQL DDL below, one statement per entry.
+var createTablePostgres = []string{
+	`CREATE TABLE IF NOT EXISTS orders (
+	id BIGSERIAL PRIMARY KEY,
+	order_number VARCHAR(20) NOT NULL,
+	order_type VARCHAR(10) NOT NULL,
+	order_date DATE NOT NULL,
+	customer_name VARCHAR(100) NOT NULL,
+	customer_code VARCHAR(20) NOT NULL,
+	product_name VARCHAR(100) NOT NULL,
+	product_code VARCHAR(20) NOT NULL,
+	quantity INT NOT NULL,
+	unit_price NUMERIC(12,2) NOT NULL,
+	total_amount NUMERIC(14,2) NOT NULL,
+	status VARCHAR(20) NOT NULL,
+	delivery_date DATE NOT NULL,
+	notes TEXT NOT NULL,
+	created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+	updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+)`,
+	"CREATE INDEX IF NOT EXISTS idx_order_type ON orders (order_type)",
+	"CREATE INDEX IF NOT EXISTS idx_status ON orders (status)",
+	"CREATE INDEX IF NOT EXISTS idx_customer_name ON orders (customer_name)",
+	"CREATE INDEX IF NOT EXISTS idx_product_name ON orders (product_name)",
+	"CREATE INDEX IF NOT EXISTS idx_order_date ON orders (order_date)",
+	"CREATE INDEX IF NOT EXISTS idx_order_number ON orders (order_number)",
+}
+
+func createTable(db *sql.DB, pg bool) {
+	if pg {
+		for _, stmt := range createTablePostgres {
+			if _, err := db.Exec(stmt); err != nil {
+				log.Fatalf("Failed to create table: %v", err)
+			}
+		}
+		log.Println("Table 'orders' ready")
+		return
+	}
 	query := `
 CREATE TABLE IF NOT EXISTS orders (
 	id BIGINT AUTO_INCREMENT PRIMARY KEY,
@@ -103,7 +142,7 @@ func planSeed(count int64, reset bool) (skip, truncate bool, err error) {
 	}
 }
 
-func seedData(db *sql.DB) {
+func seedData(db *sql.DB, pg bool) {
 	// Check if data already exists
 	var count int64
 	if err := db.QueryRow("SELECT COUNT(*) FROM orders").Scan(&count); err != nil {
@@ -118,7 +157,7 @@ func seedData(db *sql.DB) {
 		return
 	}
 	if truncate {
-		if _, err := db.Exec("TRUNCATE TABLE orders"); err != nil {
+		if _, err := db.Exec(truncateSQL(pg)); err != nil {
 			log.Fatalf("Failed to truncate orders: %v", err)
 		}
 		log.Printf("Truncated %d existing rows (SEED_RESET=1)", count)
@@ -137,7 +176,7 @@ func seedData(db *sql.DB) {
 	start := time.Now()
 
 	for batch := 0; batch < totalRows/batchSize; batch++ {
-		insertBatch(db, rng, batch, startDate, dateRange, notes)
+		insertBatch(db, pg, rng, batch, startDate, dateRange, notes)
 		if (batch+1)%20 == 0 {
 			log.Printf("  Inserted %d / %d rows (%.1fs)", (batch+1)*batchSize, totalRows, time.Since(start).Seconds())
 		}
@@ -146,7 +185,15 @@ func seedData(db *sql.DB) {
 	log.Printf("Seeding complete: %d rows in %.1fs", totalRows, time.Since(start).Seconds())
 }
 
-func insertBatch(db *sql.DB, rng *rand.Rand, batch int, startDate time.Time, dateRange int, notes []string) {
+// truncateSQL also restarts the id sequence on PostgreSQL, as TRUNCATE does on MySQL.
+func truncateSQL(pg bool) string {
+	if pg {
+		return "TRUNCATE TABLE orders RESTART IDENTITY"
+	}
+	return "TRUNCATE TABLE orders"
+}
+
+func insertBatch(db *sql.DB, pg bool, rng *rand.Rand, batch int, startDate time.Time, dateRange int, notes []string) {
 	cols := "(order_number, order_type, order_date, customer_name, customer_code, product_name, product_code, quantity, unit_price, total_amount, status, delivery_date, notes)"
 	placeholders := make([]string, 0, batchSize)
 	args := make([]any, 0, batchSize*13)
@@ -173,6 +220,9 @@ func insertBatch(db *sql.DB, rng *rand.Rand, batch int, startDate time.Time, dat
 	}
 
 	query := fmt.Sprintf("INSERT INTO orders %s VALUES %s", cols, strings.Join(placeholders, ","))
+	if pg {
+		query = model.DollarPlaceholders(query)
+	}
 	if _, err := db.Exec(query, args...); err != nil {
 		log.Fatalf("Batch insert failed at batch %d: %v", batch, err)
 	}

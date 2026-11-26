@@ -12,19 +12,32 @@ type OrderRepository interface {
 	CountOrders(params model.QueryParams) (int64, error)
 }
 
-// MySQLOrderRepository implements OrderRepository using MySQL
-type MySQLOrderRepository struct {
-	db *sql.DB
+// SQLOrderRepository implements OrderRepository over MySQL or PostgreSQL.
+type SQLOrderRepository struct {
+	db       *sql.DB
+	postgres bool
 }
 
-// NewMySQLOrderRepository creates a new MySQLOrderRepository
-func NewMySQLOrderRepository(db *sql.DB) *MySQLOrderRepository {
-	return &MySQLOrderRepository{db: db}
+// NewMySQLOrderRepository creates a repository that sends the `?` placeholders as they are.
+func NewMySQLOrderRepository(db *sql.DB) *SQLOrderRepository {
+	return &SQLOrderRepository{db: db}
 }
 
-func (r *MySQLOrderRepository) FindOrders(params model.QueryParams) ([]model.Order, error) {
+// NewPostgresOrderRepository creates a repository that rewrites placeholders to $1, $2, ….
+func NewPostgresOrderRepository(db *sql.DB) *SQLOrderRepository {
+	return &SQLOrderRepository{db: db, postgres: true}
+}
+
+func (r *SQLOrderRepository) rebind(query string) string {
+	if r.postgres {
+		return model.DollarPlaceholders(query)
+	}
+	return query
+}
+
+func (r *SQLOrderRepository) FindOrders(params model.QueryParams) ([]model.Order, error) {
 	query, args := model.BuildQuery(params)
-	rows, err := r.db.Query(query, args...)
+	rows, err := r.db.Query(r.rebind(query), args...)
 	if err != nil {
 		return nil, err
 	}
@@ -41,10 +54,10 @@ func (r *MySQLOrderRepository) FindOrders(params model.QueryParams) ([]model.Ord
 	return orders, rows.Err()
 }
 
-func (r *MySQLOrderRepository) CountOrders(params model.QueryParams) (int64, error) {
+func (r *SQLOrderRepository) CountOrders(params model.QueryParams) (int64, error) {
 	query, args := model.BuildCountQuery(params)
 	var total int64
-	if err := r.db.QueryRow(query, args...).Scan(&total); err != nil {
+	if err := r.db.QueryRow(r.rebind(query), args...).Scan(&total); err != nil {
 		return 0, err
 	}
 	return total, nil

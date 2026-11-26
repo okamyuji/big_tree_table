@@ -5,6 +5,8 @@ ruby file: ".ruby-version"
 gem "rails", "~> 8.1.4"
 gem "propshaft"
 gem "mysql2", "~> 0.5"
+# ベンチ（RAILS_ENV=bench）は PostgreSQL で動かす
+gem "pg", "~> 1.6"
 gem "puma", ">= 5.0"
 gem "importmap-rails"
 gem "turbo-rails"

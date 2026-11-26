@@ -142,6 +142,18 @@ TreeTable用の階層データを取得します。ソート、フィルター�
 
 既存互換の平坦な注文一覧APIです。BigTable版と同じ形式の `Order[]` を返します。
 
+### GET /api/v1/orders と GET /api/v1/orders/tree
+
+Rails版の同名APIと同じ応答を返すエンドポイントです。パラメータの扱い、応答の形、金額や日時の書式に加えて、Basic認証と回数制限もRails版にそろえています。資格情報は`API_BASIC_AUTH_USER`と`API_BASIC_AUTH_PASSWORD`で渡し、未設定のときはどのリクエストにも401を返します。全体の回数制限の既定は1分300回で、`API_RATE_LIMIT`で変えられるようにしてあります。3つの実装を比べるときは[`../bench`](../bench/)のスクリプトを使ってください。
+
+## PostgreSQLで動かす
+
+`DB_DRIVER=postgres`を指定すると、MySQLの代わりに`PG_URL`のPostgreSQLへ接続します。待ち受けるポートは`PORT`で変えられ、既定は8080番です。DBの接続数の上限は`DB_MAX_CONNS`、待機させておく接続数は`DB_MAX_IDLE_CONNS`で指定します。
+
+```bash
+(cd backend && DB_DRIVER=postgres PG_URL=postgres://user:pass@127.0.0.1:5432/bigtable go run main.go)
+```
+
 ## フロントエンド構成
 
 - `TreeTable.tsx`: TreeTable画面本体

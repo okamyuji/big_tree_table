@@ -17,7 +17,18 @@ module Api
 
     AUTH_REALM = "big_tree_table API"
 
-    RATE_LIMIT        = 300
+    DEFAULT_RATE_LIMIT = 300
+
+    # API_RATE_LIMIT lets the benchmark keep the counter work but stay under the
+    # limit. Anything but a positive integer keeps the default, as in the Go and
+    # snails versions.
+    def self.rate_limit_from(value)
+      s = value.to_s
+      n = s.match?(/\A\+?\d+\z/) ? s.to_i : 0
+      n.positive? ? n : DEFAULT_RATE_LIMIT
+    end
+
+    RATE_LIMIT        = rate_limit_from(ENV["API_RATE_LIMIT"])
     RATE_LIMIT_WINDOW = 1.minute
 
     # A stricter budget for wrong credentials only. rate_limit cannot express

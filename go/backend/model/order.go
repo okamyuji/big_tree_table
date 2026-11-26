@@ -20,7 +20,7 @@ type Order struct {
 	UnitPrice    float64   `json:"unit_price"`
 	TotalAmount  float64   `json:"total_amount"`
 	Status       string    `json:"status"`
-	DeliveryDate string    `json:"delivery_date"`
+	DeliveryDate *string   `json:"delivery_date"` // NULL in the shared PostgreSQL schema
 	Notes        string    `json:"notes"`
 	CreatedAt    time.Time `json:"created_at"`
 	UpdatedAt    time.Time `json:"updated_at"`
