@@ -1,6 +1,6 @@
 # snails版
 
-Rails版の注文API（`GET /api/v1/orders`と`GET /api/v1/orders/tree`）を[snails](https://snails-rb.org/)で書き直したバックエンドです。snailsはRubyのコードをSpinelでネイティブのバイナリにコンパイルするフレームワークで、ActiveRecordの代わりに生のSQLでPostgreSQLを読みます。応答の形、パラメータの扱い、Basic認証と回数制限はRails版と同じにしてあり、一致は[`../bench/parity.sh`](../bench/)で確かめます。
+Rails版の注文API（`GET /api/v1/orders`と`GET /api/v1/orders/tree`）を[snails](https://snails-rb.org/)で書き直したバックエンドです。snailsはRubyのコードをSpinelでネイティブのバイナリにコンパイルするフレームワークで、ActiveRecordの代わりに生のSQLでPostgreSQLを読みます。応答の形、パラメータの扱い、Basic認証と回数制限はRails版と同じにしてあり、一致は[`../bench/parity.sh`](../bench/)で確かめます。移植で分かったsnailsの制約とRails版、Go版との性能比較は[`LIMITATIONS.md`](LIMITATIONS.md)にまとめています。
 
 ## ファイル
 
