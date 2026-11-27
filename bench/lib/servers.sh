@@ -49,7 +49,9 @@ start_go() {
 
 start_snails() {
   local port="$1"
-  PORT="$port" SNAILS_ENV=production SNAILS_LOG_LEVEL=warn WORKERS=1 DATABASE_POOL_SIZE="$DB_CONNS" \
+  # 接続プールはプロセスごとなので、合計が DB_CONNS を超えないよう割る（割り切れない分は切り捨て）。
+  local workers="${SNAILS_WORKERS:-1}"
+  PORT="$port" SNAILS_ENV=production SNAILS_LOG_LEVEL=warn WORKERS="$workers" DATABASE_POOL_SIZE="$((DB_CONNS / workers))" \
     "$BENCH_ROOT/snails/build/snails" >"$BENCH_LOG_DIR/snails.log" 2>&1 &
   SERVER_PIDS+=($!)
   wait_listening "$port"

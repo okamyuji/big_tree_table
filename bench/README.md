@@ -58,7 +58,7 @@ PG_URL=postgres://bench@127.0.0.1:55432/big_tree_table_bench bench/run.sh
 | tree | 500件をツリーにまとめる応答 |
 | filter | LIKE、等値、日付範囲を組み合わせた絞り込み |
 
-条件は環境変数で変えられ、既定値は`run.sh`の冒頭にあります。RailsはGVLのため1プロセスで1コアしか使えず、`RAILS_WORKERS`の既定値はCPUのコア数です。Go版とsnails版は1プロセスで全コアを使うので、1プロセスのまま動かします。DBの接続数は3者とも`RAILS_WORKERS × THREADS`で同じです。
+条件は環境変数で変えられ、既定値は`run.sh`の冒頭にあります。RailsはGVLのため1プロセスで1コアしか使えず、`RAILS_WORKERS`の既定値はCPUのコア数です。Go版とsnails版は1プロセスで全コアを使うので、1プロセスのまま動かします。snails版のプロセス数は`SNAILS_WORKERS`で変えられ、接続プールは合計が3者の接続数を超えないようプロセス数で割ります。DBの接続数は3者とも`RAILS_WORKERS × THREADS`で同じです。
 
 結果は`bench/results/<日時>/`に保存され、`summary.md`に表がまとまります。サーバーのRSSは`ps`で測るので、`ps`を使えない環境では空欄になります。このディレクトリはgitの対象外です。測定結果は`RESULTS.md`にまとめてあります。
 

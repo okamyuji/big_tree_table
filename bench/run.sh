@@ -6,7 +6,7 @@
 # 使い方: PG_URL=postgres://.../big_tree_table_bench bench/run.sh
 # 任意の環境変数（既定値）:
 #   TARGETS="rails go snails"  SCENARIOS="light list deep tree filter"
-#   RAILS_WORKERS=<コア数> THREADS=5 VUS=32 DURATION=30s WARMUP=10s COOLDOWN=60
+#   RAILS_WORKERS=<コア数> SNAILS_WORKERS=1 THREADS=5 VUS=32 DURATION=30s WARMUP=10s COOLDOWN=60
 #   RESTART_PER_SCENARIO=1  MAX_LOAD=<コア数の半分>  LOAD_WAIT_LIMIT=300  K6="mise exec k6@2.3.0 -- k6"
 set -euo pipefail
 : "${PG_URL:?PG_URL にベンチ用の DB（bench/db/setup.sh で投入済み）を指定してください}"
@@ -16,6 +16,7 @@ here="$(cd "$(dirname "$0")" && pwd)"
 TARGETS="${TARGETS:-rails go snails}"
 SCENARIOS="${SCENARIOS:-light list deep tree filter}"
 export RAILS_WORKERS="${RAILS_WORKERS:-$(getconf _NPROCESSORS_ONLN)}" THREADS="${THREADS:-5}"
+export SNAILS_WORKERS="${SNAILS_WORKERS:-1}"
 VUS="${VUS:-32}" DURATION="${DURATION:-30s}" WARMUP="${WARMUP:-10s}" COOLDOWN="${COOLDOWN:-60}"
 # 1以外にすると、シナリオを同じプロセスで続けて流す（順番の影響を見るため）。
 RESTART_PER_SCENARIO="${RESTART_PER_SCENARIO:-1}"
@@ -33,6 +34,11 @@ max_conns="$(psql "$PG_URL" -XAtc 'SHOW max_connections')"
 if ((DB_CONNS >= max_conns)); then
   echo "DB の接続数 ${DB_CONNS}（RAILS_WORKERS × THREADS）が PostgreSQL の max_connections ${max_conns} 以上です。" >&2
   echo "RAILS_WORKERS か THREADS を下げるか、max_connections を上げてください。" >&2
+  exit 1
+fi
+# snails は接続プールを DB_CONNS / SNAILS_WORKERS に割るので、0 や接続数を超える値では動かない。
+if ! [[ "$SNAILS_WORKERS" =~ ^[1-9][0-9]*$ ]] || ((SNAILS_WORKERS > DB_CONNS)); then
+  echo "SNAILS_WORKERS は 1 以上 ${DB_CONNS} 以下の整数にしてください（指定値: ${SNAILS_WORKERS}）。" >&2
   exit 1
 fi
 
@@ -82,7 +88,7 @@ k6_run() { # k6_run <target> <scenario> <duration> <summary file or empty>
   echo "host=$(uname -srm) cpus=$(getconf _NPROCESSORS_ONLN)"
   # PostgreSQL が Docker の VM 内で動くとき、DB に重いシナリオの上限はこの CPU 数で決まる。
   echo "docker_vm_cpus=$(docker info --format '{{.NCPU}}' 2>/dev/null || echo unknown)"
-  echo "restart_per_scenario=$RESTART_PER_SCENARIO rails_workers=$RAILS_WORKERS threads=$THREADS db_conns=$((RAILS_WORKERS * THREADS)) vus=$VUS duration=$DURATION warmup=$WARMUP cooldown=${COOLDOWN}s"
+  echo "restart_per_scenario=$RESTART_PER_SCENARIO rails_workers=$RAILS_WORKERS snails_workers=$SNAILS_WORKERS threads=$THREADS db_conns=$((RAILS_WORKERS * THREADS)) vus=$VUS duration=$DURATION warmup=$WARMUP cooldown=${COOLDOWN}s"
   echo "rows=$(psql "$PG_URL" -XAtc 'SELECT count(*) FROM orders')"
   echo "commit=$(git -C "$here" rev-parse --short HEAD)"
 } >"$out/env.txt"
