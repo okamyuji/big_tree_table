@@ -5,7 +5,7 @@
 #
 # 使い方: PG_URL=postgres://.../big_tree_table_bench bench/run.sh
 # 任意の環境変数（既定値）:
-#   TARGETS="rails go snails"  SCENARIOS="list deep tree filter"
+#   TARGETS="rails go snails"  SCENARIOS="light list deep tree filter"
 #   RAILS_WORKERS=<コア数> THREADS=5 VUS=32 DURATION=30s WARMUP=10s COOLDOWN=60
 #   RESTART_PER_SCENARIO=1  MAX_LOAD=<コア数の半分>  LOAD_WAIT_LIMIT=300  K6="mise exec k6@2.3.0 -- k6"
 set -euo pipefail
@@ -14,7 +14,7 @@ export PG_URL
 here="$(cd "$(dirname "$0")" && pwd)"
 
 TARGETS="${TARGETS:-rails go snails}"
-SCENARIOS="${SCENARIOS:-list deep tree filter}"
+SCENARIOS="${SCENARIOS:-light list deep tree filter}"
 export RAILS_WORKERS="${RAILS_WORKERS:-$(getconf _NPROCESSORS_ONLN)}" THREADS="${THREADS:-5}"
 VUS="${VUS:-32}" DURATION="${DURATION:-30s}" WARMUP="${WARMUP:-10s}" COOLDOWN="${COOLDOWN:-60}"
 # 1以外にすると、シナリオを同じプロセスで続けて流す（順番の影響を見るため）。

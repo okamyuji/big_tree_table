@@ -1,10 +1,15 @@
 // One scenario against one API, with a fixed number of virtual users.
-// Env: BASE_URL, SCENARIO (list | deep | tree | filter), VUS, DURATION, AUTH (user:password).
+// Env: BASE_URL, SCENARIO (light | list | deep | tree | filter), VUS, DURATION, AUTH (user:password).
 import http from "k6/http";
 import { check } from "k6";
 import encoding from "k6/encoding";
 
 const SCENARIOS = {
+  // One day through the order_date index: COUNT and page stay cheap, so the API side dominates.
+  light: () => {
+    const day = `2026-${pad(rand(1, 10))}-${pad(rand(1, 28))}`;
+    return `/api/v1/orders?date_from=${day}&date_to=${day}&per_page=50`;
+  },
   // Offsets below 10,000: plain LIMIT/OFFSET.
   list: () => `/api/v1/orders?page=${rand(1, 200)}&per_page=50`,
   // Offsets from 100,000: the deferred-join path.
@@ -28,6 +33,10 @@ export const options = {
 };
 
 const headers = { Authorization: `Basic ${encoding.b64encode(__ENV.AUTH)}` };
+
+function pad(n) {
+  return String(n).padStart(2, "0");
+}
 
 function rand(lo, hi) {
   return lo + Math.floor(Math.random() * (hi - lo + 1));

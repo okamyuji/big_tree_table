@@ -52,6 +52,7 @@ PG_URL=postgres://bench@127.0.0.1:55432/big_tree_table_bench bench/run.sh
 
 | シナリオ | 内容 |
 |---|---|
+| light | 注文日を1日に絞った一覧で、DBの処理が軽く済みます |
 | list | OFFSETが10,000未満の一覧 |
 | deep | OFFSETが100,000以上の一覧で、deferred joinを通ります |
 | tree | 500件をツリーにまとめる応答 |
